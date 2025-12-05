@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - eKoolie</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Racing+Sans+One&family=Inter:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="login.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Logo -->
+      <div class="logo">
+        <div class="logo-box">
+          <div class="logo-icon">🚂</div>
+          <span class="logo-text racing">eKoolie</span>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm" class="form-box fade-in">
+        <h1 class="form-title">Login</h1>
+
+        <form onsubmit="return handleLogin(event)">
+          <div class="input-group">
+            <label class="label">Username:</label>
+            <input
+              type="text"
+              class="input"
+              id="loginUsername"
+              placeholder="Enter your username"
+              required
+            />
+            <span class="error-msg" id="loginUsernameError"
+              >Username is required</span
+            >
+          </div>
+
+          <div class="input-group">
+            <label class="label">Email:</label>
+            <input
+              type="email"
+              class="input"
+              id="loginEmail"
+              placeholder="sameer@domain.com"
+              required
+            />
+            <span class="error-msg" id="loginEmailError"
+              >Please enter a valid email</span
+            >
+          </div>
+
+          <div class="input-group">
+            <label class="label">Password:</label>
+            <input
+              type="password"
+              class="input"
+              id="loginPassword"
+              placeholder="••••••••"
+              required
+            />
+            <span class="error-msg" id="loginPasswordError"
+              >Password is required</span
+            >
+          </div>
+          <button type="submit" class="btn">Login</button>
+        </form>
+
+        <div class="switch-text">
+          New user?
+          <span class="switch-link" onclick="showRegister()"
+            >Register here</span
+          >
+        </div>
+        <div class="switch-text" style="margin-top: 10px">
+          Are you a Porter?
+          <span
+            class="switch-link"
+            onclick="togglePorterLogin()"
+            id="porterToggleText"
+            >Login as Porter</span
+          >
+        </div>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerForm" class="form-box hidden">
+        <h1 class="form-title">Register</h1>
+
+        <form onsubmit="return handleRegister(event)">
+          <div class="input-group">
+            <label class="label">Username:</label>
+            <input
+              type="text"
+              class="input"
+              id="registerUsername"
+              placeholder="isht@example.com"
+              required
+            />
+            <span class="error-msg" id="registerUsernameError"
+              >Username is required</span
+            >
+          </div>
+
+          <div class="input-group">
+            <label class="label">Email:</label>
+            <input
+              type="email"
+              class="input"
+              id="registerEmail"
+              placeholder="your@email.com"
+              required
+            />
+            <span class="error-msg" id="registerEmailError"
+              >Please enter a valid email</span
+            >
+          </div>
+
+          <div class="input-group">
+            <label class="label">Password:</label>
+            <input
+              type="password"
+              class="input"
+              id="registerPassword"
+              placeholder="••••••••"
+              required
+            />
+            <span class="error-msg" id="registerPasswordError"
+              >Password must be at least 6 characters</span
+            >
+          </div>
+
+          <button type="submit" class="btn">Register</button>
+        </form>
+
+        <div class="switch-text">
+          Already have an account?
+          <span class="switch-link" onclick="showLogin()">Login here</span>
+        </div>
+      </div>
+    </div>
+
+    <script src="login.js"></script>
+  </body>
+</html>

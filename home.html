@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>eKoolie - Book Licensed Koolie at Stations</title>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&family=Racing+Sans+One&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="home.css" />
+  </head>
+
+  <body>
+    <!-- Sidebar -->
+    <aside class="sidebar" aria-label="Main sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-badge" title="eKoolie">
+          <span style="font-size: 20px">🚂</span>
+        </div>
+        <div>
+          <div class="brand-title racing-font">eKoolie</div>
+          <div style="font-size: 12px; color: #9aa3a6; margin-top: 4px">
+            Koolie at your station
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a href="#home" class="nav-link active">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"
+            ></path>
+          </svg>
+          Home
+        </a>
+
+        <a href="#how" class="nav-link">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5"
+            ></path>
+          </svg>
+          How it works
+        </a>
+
+        <a href="#why" class="nav-link">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9.879 7.51c.832-1.014 2.23-1.51 3.621-1.51 2.481 0 4.5 2.019 4.5 4.5s-2.019 4.5-4.5 4.5c-.428 0-.843-.06-1.234-.17"
+            ></path>
+            <path
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 15.5v-2.5c0-.552.448-1 1-1h.5"
+            ></path>
+            <path
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 19.5v.01"
+            ></path>
+          </svg>
+          Why eKoolie
+        </a>
+
+        <a href="#community" class="nav-link">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2a3 3 0 00-3-3h-4a3 3 0 00-3 3v2m10-10a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            ></path>
+          </svg>
+          Community
+        </a>
+      </nav>
+
+      <div class="sidebar-actions">
+        <a class="btn btn-outline" href="login.html">Login</a>
+        <a class="btn btn-primary" href="login.html">Sign Up</a>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main" id="main">
+      <!-- HERO -->
+      <section id="home" class="hero">
+        <h1 class="hero-headline racing-font">
+          Your Luggage, Our Responsibility.
+        </h1>
+        <p class="hero-sub">
+          Book licensed Koolie at Indian railway stations — affordable, verified
+          and trackable.
+        </p>
+        <p class="hero-desc">
+          eKoolie connects travellers to licensed coolies (Koolie) so you can
+          move through stations without the burden of heavy luggage. Quick
+          booking, transparent fares, and verified Koolie for peace of mind.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn-primary btn" href="#" onclick="promptLogin(event)"
+            >Book a Koolie</a
+          >
+        </div>
+      </section>
+
+      <!-- HOW IT WORKS -->
+      <section id="how" class="section">
+        <h2>How it works</h2>
+        <p class="lead">
+          Simple three-step booking to get a Koolie at your platform.
+        </p>
+
+        <div class="grid-3">
+          <div class="card will-animate">
+            <div class="icon cyan" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                  stroke="#fff"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <h3>Search Station</h3>
+            <p>
+              Type your arrival station or select from recent stations to find
+              available Koolie nearby.
+            </p>
+          </div>
+
+          <div class="card will-animate">
+            <div class="icon cyan" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  stroke="#fff"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <h3>Select Verified Koolie</h3>
+            <p>
+              Choose from licensed Koolie with ratings, ID verification and fare
+              per bag — or let eKoolie auto-assign one.
+            </p>
+          </div>
+
+          <div class="card will-animate">
+            <div class="icon yellow" aria-hidden="true">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  stroke="#fff"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <h3>Relax — Koolie Arrives</h3>
+            <p>
+              Track your Koolie in-app, confirm arrival, pay securely or cash on
+              service, and leave a rating afterward.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- WHY CHOOSE EKOOLIE -->
+      <section id="why" class="section">
+        <h2>Why choose eKoolie?</h2>
+        <p class="lead">
+          Designed for travellers — safe, reliable, and affordable.
+        </p>
+
+        <div class="grid-3">
+          <div class="card will-animate">
+            <div class="icon cyan">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                  stroke="#fff"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <h3>Verified Koolie</h3>
+            <p>
+              All Koolie are licensed and background-checked with displayed ID
+              numbers and verification badges.
+            </p>
+          </div>
+
+          <div class="card will-animate">
+            <div class="icon cyan">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  stroke="#fff"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <h3>Transparent Pricing</h3>
+            <p>
+              Clear fare breakdown by bag or weight plus optional tipping — no
+              hidden fees.
+            </p>
+          </div>
+
+          <div class="card will-animate">
+            <div class="icon cyan">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  stroke="#fff"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <h3>Live Tracking</h3>
+            <p>
+              See Koolie location and ETA in real-time once they accept your
+              job.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- TESTIMONIALS / UPCOMING (image cards) -->
+      <section class="section">
+        <h2>Recent Bookings / Images</h2>
+        <p class="lead">
+          Photos from travellers and Koolie — real journeys, real help.
+        </p>
+
+        <div class="grid-3">
+          <div class="card will-animate">
+            <div
+              class="race-image"
+              style="
+                background-image: url('https://images.hindustantimes.com/rf/image_size_630x354/HT/p2/2018/06/05/Pictures/passengers-station-along-railway-platform-carrying-luggage_c7ccd1bc-68bc-11e8-8033-47bccc77d658.jpg');
+              "
+            ></div>
+            <div style="padding-top: 14px">
+              <div
+                style="
+                  font-size: 12px;
+                  color: var(--cyan);
+                  font-weight: 700;
+                  margin-bottom: 8px;
+                "
+              >
+                STATION HELP
+              </div>
+              <h3 style="margin: 0 0 8px 0">Helping with heavy bags</h3>
+              <p style="color: var(--muted); margin: 0">
+                “Quick, polite and efficient — saved us a lot of time.” — Rohit
+              </p>
+            </div>
+          </div>
+
+          <div class="card will-animate">
+            <div
+              class="race-image"
+              style="
+                background-image: url('https://im.rediff.com/news/2018/may/27coolie5.jpg?w=450&h=450');
+              "
+            ></div>
+            <div style="padding-top: 14px">
+              <div
+                style="
+                  font-size: 12px;
+                  color: #f59e0b;
+                  font-weight: 700;
+                  margin-bottom: 8px;
+                "
+              >
+                Koolie RATING
+              </div>
+              <h3 style="margin: 0 0 8px 0">Verified and trusted</h3>
+              <p style="color: var(--muted); margin: 0">
+                “Profile showed licence and reviews — felt safe.” — Meera
+              </p>
+            </div>
+          </div>
+
+          <div class="card will-animate">
+            <div
+              class="race-image"
+              style="
+                background-image: url('https://t3.ftcdn.net/jpg/03/55/57/92/360_F_355579231_zxxhlUgUOUAIhrvxtEMYqjkEaZaUSUDI.jpg');
+              "
+            ></div>
+            <div style="padding-top: 14px">
+              <div
+                style="
+                  font-size: 12px;
+                  color: #7dd3fc;
+                  font-weight: 700;
+                  margin-bottom: 8px;
+                "
+              >
+                ON-TIME
+              </div>
+              <h3 style="margin: 0 0 8px 0">Arrived before train</h3>
+              <p style="color: var(--muted); margin: 0">
+                “Punctual and friendly — great service.” — Ananya
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMMUNITY -->
+      <section id="community" class="section">
+        <h2>Community</h2>
+        <p class="lead">
+          Share feedback, vote in quick polls, and mark favourite Koolie.
+        </p>
+
+        <div class="grid-2">
+          <div class="card will-animate">
+            <h3 style="margin-bottom: 12px">Recent Activity</h3>
+            <div
+              id="activity-list"
+              style="display: flex; flex-direction: column; gap: 12px"
+            >
+              <div class="activity">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 6px;
+                  "
+                >
+                  <div class="avatar" style="background: #ef4444">RD</div>
+                  <div>
+                    <div style="font-weight: 700">Rohit D.</div>
+                    <div style="font-size: 12px; color: var(--muted-2)">
+                      5 minutes ago
+                    </div>
+                  </div>
+                </div>
+                <div style="color: var(--muted)">
+                  "Saved me a long carry between platforms — highly recommend!"
+                </div>
+              </div>
+
+              <div class="activity">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 6px;
+                  "
+                >
+                  <div class="avatar" style="background: #38bdf8">SM</div>
+                  <div>
+                    <div style="font-weight: 700">Sana M.</div>
+                    <div style="font-size: 12px; color: var(--muted-2)">
+                      1 hour ago
+                    </div>
+                  </div>
+                </div>
+                <div style="color: var(--muted)">
+                  "Easy booking and transparent pricing — quick and safe."
+                </div>
+              </div>
+            </div>
+
+            <div
+              id="review-section"
+              style="margin-top: 20px; text-align: center"
+            >
+              <button
+                id="add-review-btn"
+                class="btn btn-outline"
+                onclick="showReviewForm()"
+              >
+                Add a review
+              </button>
+
+              <div
+                id="review-form"
+                style="
+                  display: none;
+                  flex-direction: column;
+                  gap: 10px;
+                  margin-top: 10px;
+                "
+              >
+                <textarea
+                  id="review-input"
+                  rows="3"
+                  style="
+                    width: 100%;
+                    padding: 10px;
+                    border-radius: 8px;
+                    background: #222;
+                    border: 1px solid #333;
+                    color: white;
+                    resize: vertical;
+                  "
+                  placeholder="Write your review here..."
+                ></textarea>
+                <div style="display: flex; gap: 10px; justify-content: center">
+                  <button class="btn btn-primary" onclick="submitReview()">
+                    Post
+                  </button>
+                  <button class="btn btn-outline" onclick="cancelReview()">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card will-animate">
+            <h3 style="margin-bottom: 12px">Contact & Support</h3>
+            <p style="color: var(--muted); margin-bottom: 14px">
+              Have questions or want to register as a Koolie? Reach us at:
+            </p>
+            <p style="font-weight: 700; color: var(--white); margin: 0 0 8px">
+              support@ekoolie.in
+            </p>
+            <p style="color: var(--muted); margin: 0">
+              Or call: +91 98765 43210
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="home.js"></script>
+  </body>
+</html>

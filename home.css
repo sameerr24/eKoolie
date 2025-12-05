@@ -1,0 +1,423 @@
+      :root {
+        --bg: linear-gradient(135deg, #000000, #0b7e7e);
+        --panel: #141414;
+        --panel-2: #1a1a1a;
+        --muted: #9ca3af; /* gray-400-ish */
+        --muted-2: #6b7280; /* gray-500-ish */
+        --white: #ffffff;
+        --cyan: #06b6d4; /* soft teal cyan (accent) */
+        --accent-dark: rgba(6, 182, 212, 0.12);
+        --card-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.04);
+      }
+
+      /* Reset & base */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial;
+        background-image: url("https://images.squarespace-cdn.com/content/v1/5a3bb03b4c326d76de73ddaa/1622559786569-F4UVF7274QAKJHWD00UM/The_Common_Wanderer_india_train_travel_tips-17_1.jpg");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+        position: relative;
+        color: var(--white);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        overflow-y: auto;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: -1;
+      }
+
+      .racing-font {
+        font-family: "Racing Sans One", cursive;
+      }
+
+      /* Layout */
+      .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        width: 260px;
+        background: linear-gradient(180deg, #000000, #671203);
+        border-right: 1px solid rgba(6, 182, 212, 0.12);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      /* #5e0606 */
+
+      .sidebar-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo-badge {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--cyan) 0%, #028a9a 100%);
+        box-shadow: 0 6px 18px rgba(6, 182, 212, 0.12),
+          inset 0 -6px 12px rgba(2, 2, 2, 0.25);
+        font-weight: 700;
+      }
+
+      .brand-title {
+        font-size: 20px;
+        color: var(--white);
+        font-weight: 700;
+      }
+
+      .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 8px;
+        flex: 1;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        color: #bfc7cb;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.18s ease;
+      }
+
+      .nav-link svg {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        color: #bfc7cb;
+      }
+
+      .nav-link:hover {
+        background: var(--accent-dark);
+        color: var(--cyan);
+      }
+
+      .nav-link.active {
+        background: rgba(6, 182, 212, 0.08);
+        color: var(--cyan);
+        font-weight: 600;
+      }
+
+      .sidebar-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 10px 14px;
+        text-align: center;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .btn-outline {
+        color: var(--white);
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .btn-primary {
+        color: #042425;
+        background: linear-gradient(135deg, var(--cyan), #0aa7bd);
+        border: none;
+      }
+
+      /* Main content area (desktop only) */
+      .main {
+        margin-left: 260px;
+        padding: 48px 64px;
+      }
+
+      /* Hero */
+      .hero {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        padding: 80px 80px;
+        background-color: #070707;
+        margin-bottom: 36px;
+      }
+
+      .hero::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("https://i.guim.co.uk/img/media/60a1abe01ee10ef057576789bd5d4aae7aa1cbff/0_39_5040_3025/master/5040.jpg?width=1200&quality=85&auto=format&fit=max&s=80dc7c6f1bf924f09f0f0f03cccea28c");
+        background-size: cover;
+        background-position: center;
+        opacity: 0.35;
+        filter: grayscale(10%) contrast(0.85);
+        z-index: 0;
+      }
+
+      .hero > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-headline {
+        font-size: 48px;
+        line-height: 1;
+        letter-spacing: 1px;
+        color: transparent;
+        -webkit-background-clip: text;
+        background-clip: text;
+        background-image: linear-gradient(90deg, var(--cyan), #66f0ee 60%);
+        margin: 0 0 14px 0;
+        font-weight: 800;
+        font-family: "Inter", sans-serif;
+      }
+
+      .hero-sub {
+        font-size: 20px;
+        color: #dbeef2;
+        margin: 0 0 12px 0;
+        font-weight: 400;
+      }
+
+      .hero-desc {
+        color: #bfc7cb;
+        max-width: 900px;
+        margin-bottom: 22px;
+        font-size: 16px;
+      }
+
+      .hero-actions {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .btn-ghost {
+        background: var(--white);
+        color: #0b0b0b;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 700;
+      }
+
+      /* Sections */
+      .section {
+        margin-bottom: 40px;
+      }
+
+      .section h2 {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        color: var(--white);
+      }
+
+      .section p.lead {
+        margin: 0 0 18px 0;
+        color: var(--muted);
+      }
+
+      /* Grid utility (desktop) */
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+      }
+
+      /* Card */
+      .card {
+        background: linear-gradient(180deg, var(--panel-2), #111111);
+        padding: 22px;
+        border-radius: 16px;
+        border: 1px solid var(--glass-border);
+        box-shadow: var(--card-shadow);
+        transition: transform 0.28s ease, box-shadow 0.28s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 20px 50px rgba(2, 6, 23, 0.7);
+      }
+
+      .card .icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 12px;
+      }
+
+      .icon.cyan {
+        background: linear-gradient(135deg, var(--cyan), #0aa7bd);
+        box-shadow: 0 6px 18px rgba(6, 182, 212, 0.08);
+      }
+      .icon.yellow {
+        background: linear-gradient(135deg, #f7c948, #f59e0b);
+      }
+
+      .card h3 {
+        margin: 0 0 10px 0;
+        font-size: 20px;
+        color: var(--white);
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      /* Race cards */
+      .race-image {
+        height: 190px;
+        background-position: center;
+        background-size: cover;
+      }
+      .race-badge {
+        display: inline-block;
+        font-size: 12px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        font-weight: 700;
+      }
+
+      /* Standings list */
+      .list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #0f0f0f;
+        padding: 12px;
+        border-radius: 12px;
+        transition: background 0.18s ease;
+      }
+      .list-item:hover {
+        background: #222222;
+      }
+      .list-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .rank {
+        font-size: 20px;
+        font-weight: 800;
+        color: #9aa3a6;
+        width: 36px;
+        text-align: center;
+      }
+      .team {
+        font-weight: 700;
+        color: var(--white);
+      }
+      .points {
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--cyan);
+      }
+
+      /* Community cards & activity */
+      .activity {
+        background: #0f0f0f;
+        padding: 12px;
+        border-radius: 12px;
+      }
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+      }
+
+      /* CTA hero at bottom */
+      .cta {
+        padding: 64px;
+        border-radius: 12px;
+        background: linear-gradient(
+          180deg,
+          rgba(6, 182, 212, 0.04),
+          rgba(6, 182, 212, 0.02)
+        );
+        text-align: center;
+      }
+      .cta h2 {
+        margin: 0 0 12px 0;
+        font-size: 28px;
+      }
+      .cta p {
+        color: var(--muted);
+        margin: 0 0 20px 0;
+      }
+
+      /* Footer small */
+      .small-footer {
+        margin-top: 24px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.03);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      /* Animations (for cards) */
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .will-animate {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: all 0.6s cubic-bezier(0.2, 0.9, 0.2, 1);
+      }
+
+      /* Desktop-only: hide overflow on body for consistent look */
+      @media (max-width: 1000px) {
+        /* intentionally do nothing — this build is desktop-only */
+      }
