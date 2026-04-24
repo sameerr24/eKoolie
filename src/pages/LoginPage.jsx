@@ -84,6 +84,32 @@ export function LoginPage() {
 
   const setup = useCallback(
     ({ container }) => {
+      const body = document.body;
+      const previousBodyStyles = {
+        display: body.style.display,
+        alignItems: body.style.alignItems,
+        justifyContent: body.style.justifyContent,
+        padding: body.style.padding,
+        paddingLeft: body.style.paddingLeft,
+        backgroundImage: body.style.backgroundImage,
+        backgroundSize: body.style.backgroundSize,
+        backgroundPosition: body.style.backgroundPosition,
+        backgroundAttachment: body.style.backgroundAttachment,
+        backgroundRepeat: body.style.backgroundRepeat,
+      };
+
+      body.style.display = "flex";
+      body.style.alignItems = "center";
+      body.style.justifyContent = "flex-start";
+      body.style.padding = "20px";
+      body.style.paddingLeft = "80px";
+      body.style.backgroundImage =
+        'url("https://lp-cms-production.imgix.net/2024-08/GettyRF938095766.jpg?auto=format,compress&q=72&fit=crop")';
+      body.style.backgroundSize = "cover";
+      body.style.backgroundPosition = "center";
+      body.style.backgroundAttachment = "fixed";
+      body.style.backgroundRepeat = "no-repeat";
+
       let isPorterLogin = false;
 
       const previousFns = {
@@ -248,6 +274,16 @@ export function LoginPage() {
 
       return () => {
         inputs.forEach((input) => input.removeEventListener("input", onInput));
+        body.style.display = previousBodyStyles.display;
+        body.style.alignItems = previousBodyStyles.alignItems;
+        body.style.justifyContent = previousBodyStyles.justifyContent;
+        body.style.padding = previousBodyStyles.padding;
+        body.style.paddingLeft = previousBodyStyles.paddingLeft;
+        body.style.backgroundImage = previousBodyStyles.backgroundImage;
+        body.style.backgroundSize = previousBodyStyles.backgroundSize;
+        body.style.backgroundPosition = previousBodyStyles.backgroundPosition;
+        body.style.backgroundAttachment = previousBodyStyles.backgroundAttachment;
+        body.style.backgroundRepeat = previousBodyStyles.backgroundRepeat;
         window.togglePorterLogin = previousFns.togglePorterLogin;
         window.showRegister = previousFns.showRegister;
         window.showLogin = previousFns.showLogin;
