@@ -282,7 +282,8 @@ export function LoginPage() {
         body.style.backgroundImage = previousBodyStyles.backgroundImage;
         body.style.backgroundSize = previousBodyStyles.backgroundSize;
         body.style.backgroundPosition = previousBodyStyles.backgroundPosition;
-        body.style.backgroundAttachment = previousBodyStyles.backgroundAttachment;
+        body.style.backgroundAttachment =
+          previousBodyStyles.backgroundAttachment;
         body.style.backgroundRepeat = previousBodyStyles.backgroundRepeat;
         window.togglePorterLogin = previousFns.togglePorterLogin;
         window.showRegister = previousFns.showRegister;
