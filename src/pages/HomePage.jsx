@@ -220,6 +220,21 @@ export function HomePage() {
 
   const setup = useCallback(
     ({ container }) => {
+      const body = document.body;
+      const previousBodyStyles = {
+        display: body.style.display,
+        alignItems: body.style.alignItems,
+        justifyContent: body.style.justifyContent,
+        padding: body.style.padding,
+        paddingLeft: body.style.paddingLeft,
+      };
+
+      body.style.display = "block";
+      body.style.alignItems = "stretch";
+      body.style.justifyContent = "normal";
+      body.style.padding = "0";
+      body.style.paddingLeft = "0";
+
       const previousFns = {
         showReviewForm: window.showReviewForm,
         cancelReview: window.cancelReview,
@@ -344,6 +359,11 @@ export function HomePage() {
           link.removeEventListener("click", onNavClick),
         );
         observer.disconnect();
+        body.style.display = previousBodyStyles.display;
+        body.style.alignItems = previousBodyStyles.alignItems;
+        body.style.justifyContent = previousBodyStyles.justifyContent;
+        body.style.padding = previousBodyStyles.padding;
+        body.style.paddingLeft = previousBodyStyles.paddingLeft;
         window.showReviewForm = previousFns.showReviewForm;
         window.cancelReview = previousFns.cancelReview;
         window.submitReview = previousFns.submitReview;
@@ -356,5 +376,5 @@ export function HomePage() {
 
   useLegacyPage({ containerRef, html: HOME_HTML, navigate, setup });
 
-  return <div ref={containerRef} />;
+  return <div ref={containerRef} className="home-page" />;
 }

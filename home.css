@@ -164,6 +164,13 @@
         padding: 48px 64px;
       }
 
+      .home-page .main {
+        display: block;
+        justify-content: flex-start;
+        min-height: auto;
+        align-items: stretch;
+      }
+
       /* Hero */
       .hero {
         position: relative;
@@ -235,6 +242,10 @@
       /* Sections */
       .section {
         margin-bottom: 40px;
+      }
+
+      .home-page .section {
+        scroll-margin-top: 24px;
       }
 
       .section h2 {
