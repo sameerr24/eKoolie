@@ -1,0 +1,239 @@
+:root {
+  --bg: linear-gradient(135deg, #000000, #0b7e7e);
+  --panel: #141414;
+  --panel-2: #1a1a1a;
+  --muted: #9ca3af;
+  --muted-2: #6b7280;
+  --white: #ffffff;
+  --cyan: #06b6d4;
+  --accent-dark: rgba(6, 182, 212, 0.12);
+  --card-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial;
+  background-image: url("https://c8.alamy.com/comp/D201JY/porters-at-new-delhi-railway-station-delhi-india-D201JY.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  position: relative;
+  color: var(--white);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-y: auto;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: -1;
+}
+
+.racing-font {
+  font-family: "Racing Sans One", cursive;
+}
+
+/* Layout */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 260px;
+  background: linear-gradient(180deg, #000000, #671203);
+  border-right: 1px solid rgba(6, 182, 212, 0.12);
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--cyan) 0%, #028a9a 100%);
+  box-shadow: 0 6px 18px rgba(6, 182, 212, 0.12),
+    inset 0 -6px 12px rgba(2, 2, 2, 0.25);
+  font-weight: 700;
+}
+
+.brand-title {
+  font-size: 20px;
+  color: var(--white);
+  font-weight: 700;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  flex: 1;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: #bfc7cb;
+  text-decoration: none;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.18s ease;
+}
+
+.nav-link svg {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: #bfc7cb;
+}
+
+.nav-link:hover {
+  background: var(--accent-dark);
+  color: var(--cyan);
+}
+
+.nav-link.active {
+  background: rgba(6, 182, 212, 0.08);
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 12px 24px;
+  text-align: center;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 16px;
+  width: 100%;
+}
+
+.btn-primary {
+  color: #042425;
+  background: linear-gradient(135deg, var(--cyan), #0aa7bd);
+}
+
+.main {
+  margin-left: 260px;
+  padding: 48px 64px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card {
+  background: linear-gradient(180deg, var(--panel-2), #111111);
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--card-shadow);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.payment-summary {
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--muted);
+}
+
+.summary-row.total {
+  color: var(--white);
+  font-weight: 700;
+  font-size: 18px;
+  margin-top: 16px;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.method-option:hover,
+.method-option.selected {
+  border-color: var(--cyan);
+  background: rgba(6, 182, 212, 0.05);
+}
+
+.radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--muted);
+  position: relative;
+}
+
+.method-option.selected .radio {
+  border-color: var(--cyan);
+}
+
+.method-option.selected .radio::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 10px;
+  height: 10px;
+  background: var(--cyan);
+  border-radius: 50%;
+}
