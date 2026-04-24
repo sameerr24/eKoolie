@@ -340,7 +340,9 @@ export function HomePage() {
       });
 
       return () => {
-        navLinks.forEach((link) => link.removeEventListener("click", onNavClick));
+        navLinks.forEach((link) =>
+          link.removeEventListener("click", onNavClick),
+        );
         observer.disconnect();
         window.showReviewForm = previousFns.showReviewForm;
         window.cancelReview = previousFns.cancelReview;

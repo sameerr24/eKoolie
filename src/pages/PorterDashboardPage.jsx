@@ -166,7 +166,9 @@ export function PorterDashboardPage() {
       const renderDashboardStats = () => {
         const stats = getDashboardStats();
         const earningsValue = container.querySelector("#todayEarningsValue");
-        const jobsCompletedValue = container.querySelector("#jobsCompletedValue");
+        const jobsCompletedValue = container.querySelector(
+          "#jobsCompletedValue",
+        );
 
         if (earningsValue) {
           earningsValue.textContent = `₹${stats.todaysEarnings}`;

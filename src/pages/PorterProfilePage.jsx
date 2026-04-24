@@ -69,14 +69,18 @@ export function PorterProfilePage() {
       const onProceedPay = () => navigate("/payment");
       const onBack = () => navigate("/book");
 
-      container.querySelector("#proceedPayBtn")?.addEventListener("click", onProceedPay);
+      container
+        .querySelector("#proceedPayBtn")
+        ?.addEventListener("click", onProceedPay);
       container.querySelector("#backBtn")?.addEventListener("click", onBack);
 
       return () => {
         container
           .querySelector("#proceedPayBtn")
           ?.removeEventListener("click", onProceedPay);
-        container.querySelector("#backBtn")?.removeEventListener("click", onBack);
+        container
+          .querySelector("#backBtn")
+          ?.removeEventListener("click", onBack);
       };
     },
     [navigate],

@@ -17,7 +17,10 @@ export default function App() {
       <Route path="/book" element={<BookPage />} />
       <Route path="/book.html" element={<Navigate to="/book" replace />} />
       <Route path="/payment" element={<PaymentPage />} />
-      <Route path="/payment.html" element={<Navigate to="/payment" replace />} />
+      <Route
+        path="/payment.html"
+        element={<Navigate to="/payment" replace />}
+      />
       <Route path="/porter-profile" element={<PorterProfilePage />} />
       <Route
         path="/porter_profile.html"

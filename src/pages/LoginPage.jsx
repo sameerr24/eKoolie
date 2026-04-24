@@ -200,9 +200,11 @@ export function LoginPage() {
       window.handleRegister = (event) => {
         event.preventDefault();
 
-        const username = container.querySelector("#registerUsername")?.value || "";
+        const username =
+          container.querySelector("#registerUsername")?.value || "";
         const email = container.querySelector("#registerEmail")?.value || "";
-        const password = container.querySelector("#registerPassword")?.value || "";
+        const password =
+          container.querySelector("#registerPassword")?.value || "";
 
         let isValid = true;
 

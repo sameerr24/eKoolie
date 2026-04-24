@@ -50,32 +50,29 @@ export function PaymentPage() {
   const containerRef = useRef(null);
   const navigate = useNavigate();
 
-  const setup = useCallback(
-    () => {
-      const previousFns = {
-        selectMethod: window.selectMethod,
-        completePayment: window.completePayment,
-      };
+  const setup = useCallback(() => {
+    const previousFns = {
+      selectMethod: window.selectMethod,
+      completePayment: window.completePayment,
+    };
 
-      window.selectMethod = (element) => {
-        document
-          .querySelectorAll(".method-option")
-          .forEach((option) => option.classList.remove("selected"));
-        element.classList.add("selected");
-      };
+    window.selectMethod = (element) => {
+      document
+        .querySelectorAll(".method-option")
+        .forEach((option) => option.classList.remove("selected"));
+      element.classList.add("selected");
+    };
 
-      window.completePayment = () => {
-        alert("Payment Successful! Your porter is confirmed.");
-        navigate("/book");
-      };
+    window.completePayment = () => {
+      alert("Payment Successful! Your porter is confirmed.");
+      navigate("/book");
+    };
 
-      return () => {
-        window.selectMethod = previousFns.selectMethod;
-        window.completePayment = previousFns.completePayment;
-      };
-    },
-    [navigate],
-  );
+    return () => {
+      window.selectMethod = previousFns.selectMethod;
+      window.completePayment = previousFns.completePayment;
+    };
+  }, [navigate]);
 
   useLegacyPage({ containerRef, html: PAYMENT_HTML, navigate, setup });
 
