@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -26,7 +26,7 @@
       <div id="loginForm" class="form-box fade-in">
         <h1 class="form-title">Login</h1>
 
-        <form onsubmit="return handleLogin(event)">
+        <form onsubmit="return handleLogin(event);">
           <div class="input-group">
             <label class="label">Username:</label>
             <input
@@ -68,12 +68,12 @@
               >Password is required</span
             >
           </div>
-          <button type="submit" class="btn">Login</button>
+          <button id="loginBtn" type="submit" class="btn">Login</button>
         </form>
 
         <div class="switch-text">
           New user?
-          <span class="switch-link" onclick="showRegister()"
+          <span id="registerLink" class="switch-link" onclick="showRegister()"
             >Register here</span
           >
         </div>
@@ -92,7 +92,7 @@
       <div id="registerForm" class="form-box hidden">
         <h1 class="form-title">Register</h1>
 
-        <form onsubmit="return handleRegister(event)">
+        <form onsubmit="return handleRegister(event);">
           <div class="input-group">
             <label class="label">Username:</label>
             <input
@@ -135,7 +135,9 @@
             >
           </div>
 
-          <button type="submit" class="btn">Register</button>
+          <button id="registerButton" type="submit" class="btn">
+            Register
+          </button>
         </form>
 
         <div class="switch-text">

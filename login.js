@@ -5,7 +5,7 @@ function togglePorterLogin() {
   const title = document.querySelector("#loginForm .form-title");
   const toggleText = document.getElementById("porterToggleText");
   const registerLink = document.querySelector(
-    "#loginForm .switch-text:first-of-type"
+    "#loginForm .switch-text:first-of-type",
   );
 
   if (isPorterLogin) {
@@ -92,10 +92,10 @@ function handleLogin(event) {
     localStorage.setItem("username", username);
 
     if (isPorterLogin) {
-      alert("Porter Login successful! Redirecting to dashboard...");
+      //alert("Porter Login successful! Redirecting to dashboard...");
       window.location.href = "porter_dashboard.html";
     } else {
-      alert("Login successful! Redirecting to booking...");
+      //alert("Login successful! Redirecting to booking...");
       window.location.href = "book.html";
     }
   }
@@ -144,8 +144,8 @@ function handleRegister(event) {
   }
 
   if (isValid) {
-    alert("Registration successful! Welcome to eKoolie!");
-    showLogin();
+    loginUser(userData);
+    window.location.href = "book.html";
   }
 
   return false;

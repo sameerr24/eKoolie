@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -81,6 +81,7 @@
           <div class="form-group">
             <label class="form-label">Train Number</label>
             <input
+              id="train_number"
               type="text"
               class="form-input"
               placeholder="e.g. 12951"
@@ -92,6 +93,7 @@
             <div class="form-group">
               <label class="form-label">Coach</label>
               <input
+                id="coach"
                 type="text"
                 class="form-input"
                 placeholder="e.g. B2"
@@ -101,6 +103,7 @@
             <div class="form-group">
               <label class="form-label">Seat Number</label>
               <input
+                id="seat_number"
                 type="text"
                 class="form-input"
                 placeholder="e.g. 45"
@@ -112,6 +115,7 @@
           <div class="form-group">
             <label class="form-label">Arrival Station</label>
             <input
+              id="station"
               type="text"
               class="form-input"
               placeholder="e.g. New Delhi"
@@ -123,6 +127,7 @@
             <div class="form-group">
               <label class="form-label">Platform Number</label>
               <input
+                id="platform"
                 type="text"
                 class="form-input"
                 placeholder="e.g. 12"
@@ -131,11 +136,16 @@
             </div>
             <div class="form-group">
               <label class="form-label">Arrival Time</label>
-              <input type="time" class="form-input" required />
+              <input id="time" type="time" class="form-input" required />
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary" style="width: 100%">
+          <button
+            id="submit"
+            type="submit"
+            class="btn btn-primary"
+            style="width: 100%"
+          >
             Search Nearby Porters
           </button>
         </form>
@@ -152,7 +162,7 @@
             <div class="porter-preview">
               <div class="porter-avatar"></div>
               <div>
-                <div style="font-weight: 700; font-size: 18px">Madhav Gaba</div>
+                <div style="font-weight: 700; font-size: 18px">Sumit Kumar</div>
                 <div style="color: var(--muted); font-size: 14px">
                   ID: KL-2024-89 • ⭐ 4.8
                 </div>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -62,13 +62,17 @@
           <div class="profile-img"></div>
           <div class="profile-info">
             <span class="badge">Verified License #KL-2024-89</span>
-            <h1>Madhav Gaba</h1>
+            <h1>Sumit Kumar</h1>
             <p style="color: var(--muted); margin: 0 0 16px 0">
               Speaking: Hindi, English, Marathi
             </p>
             <div style="display: flex; gap: 12px">
-              <a href="payment.html" class="btn btn-primary">Proceed to Pay</a>
-              <a href="book.html" class="btn btn-outline">Back</a>
+              <button id="proceedPayBtn" type="button" class="btn btn-primary">
+                Proceed to Pay
+              </button>
+              <button id="backBtn" type="button" class="btn btn-outline">
+                Back
+              </button>
             </div>
           </div>
         </div>
@@ -113,5 +117,14 @@
         </div>
       </div>
     </main>
+    <script>
+      document.getElementById("proceedPayBtn").onclick = () => {
+        window.location.href = "payment.html";
+      };
+
+      document.getElementById("backBtn").onclick = () => {
+        window.location.href = "book.html";
+      };
+    </script>
   </body>
 </html>

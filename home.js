@@ -49,7 +49,7 @@ function promptLogin(e) {
   e.preventDefault();
   if (
     confirm(
-      "Please Login or Sign Up to book a porter.\n\nClick OK to proceed to the Login page."
+      "Please Login or Sign Up to book a porter.\n\nClick OK to proceed to the Login page.",
     )
   ) {
     window.location.href = "login.html";
@@ -68,7 +68,7 @@ const obs = new IntersectionObserver(
       }
     });
   },
-  { threshold: 0.12, rootMargin: "0px 0px -50px 0px" }
+  { threshold: 0.12, rootMargin: "0px 0px -50px 0px" },
 );
 
 document.querySelectorAll(".will-animate").forEach((el) => {
