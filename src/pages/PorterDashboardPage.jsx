@@ -106,6 +106,7 @@ export function PorterDashboardPage() {
     ({ container }) => {
       const DASHBOARD_STATS_KEY = "porterDashboardStats";
       const DEFAULT_DASHBOARD_STATS = { todaysEarnings: 850, jobsCompleted: 5 };
+      const NEXT_JOB_NOTIFICATION_DELAY_MS = 6000;
       const CURRENT_JOB = {
         platform: "Platform 4",
         train: "12951 - Rajdhani Exp",
@@ -231,7 +232,7 @@ export function PorterDashboardPage() {
           modal?.classList.add("hidden");
         }, 300);
 
-        queueTimeout(showJobNotification, 3000);
+        queueTimeout(showJobNotification, NEXT_JOB_NOTIFICATION_DELAY_MS);
       };
 
       window.completeJob = () => {
@@ -266,7 +267,7 @@ export function PorterDashboardPage() {
           `;
         }
 
-        queueTimeout(showJobNotification, 3000);
+        queueTimeout(showJobNotification, NEXT_JOB_NOTIFICATION_DELAY_MS);
       };
 
       window.logout = () => {
@@ -285,7 +286,7 @@ export function PorterDashboardPage() {
       }
 
       renderDashboardStats();
-      queueTimeout(showJobNotification, 3000);
+      queueTimeout(showJobNotification, NEXT_JOB_NOTIFICATION_DELAY_MS);
 
       return () => {
         timeouts.forEach((id) => clearTimeout(id));
