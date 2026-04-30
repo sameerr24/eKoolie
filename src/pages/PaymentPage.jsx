@@ -84,7 +84,9 @@ export function PaymentPage() {
     })();
     const latestBooking = (() => {
       try {
-        return JSON.parse(localStorage.getItem("latestBookingRequest") || "null");
+        return JSON.parse(
+          localStorage.getItem("latestBookingRequest") || "null",
+        );
       } catch (error) {
         return null;
       }
@@ -137,8 +139,9 @@ export function PaymentPage() {
         },
         body: JSON.stringify({
           paymentMethod:
-            document.querySelector(".method-option.selected span")?.textContent?.trim() ||
-            "UPI / QR Code",
+            document
+              .querySelector(".method-option.selected span")
+              ?.textContent?.trim() || "UPI / QR Code",
           amount: totalAmount,
         }),
       })

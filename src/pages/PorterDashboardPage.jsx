@@ -77,6 +77,10 @@ const DASHBOARD_HTML = `
     <p id="requestsHint" style="color: var(--muted)">
       Requests assigned to you will appear here.
     </p>
+    <div style="display: flex; align-items: center; gap: 12px; margin: 10px 0 14px;">
+      <div id="requestsCount" class="skill-chip">0 requests</div>
+      <button id="refreshRequestsBtn" class="btn btn-outline" type="button">Refresh</button>
+    </div>
     <div id="requestsList" class="requests-list"></div>
     <div id="activeJob" class="active-job hidden"></div>
   </div>
@@ -99,7 +103,10 @@ export function PorterDashboardPage() {
       const porterNameFallback = localStorage.getItem("porterName");
       const requestsList = container.querySelector("#requestsList");
       const requestsHint = container.querySelector("#requestsHint");
+      const requestsCount = container.querySelector("#requestsCount");
+      const refreshRequestsBtn = container.querySelector("#refreshRequestsBtn");
       const activeJob = container.querySelector("#activeJob");
+      let lastRequestIds = [];
 
       const escapeHtml = (value) =>
         String(value)
@@ -161,6 +168,16 @@ export function PorterDashboardPage() {
       const renderRequests = (requests = []) => {
         if (!requestsList) {
           return;
+        }
+
+        if (requestsCount) {
+          requestsCount.textContent = `${requests.length} request${requests.length === 1 ? "" : "s"}`;
+        }
+
+        if (requestsHint) {
+          requestsHint.textContent = requests.length > 0
+            ? `You have ${requests.length} active booking request${requests.length === 1 ? "" : "s"}.`
+            : "Requests assigned to you will appear here.";
         }
 
         if (!requests.length) {
@@ -262,16 +279,20 @@ export function PorterDashboardPage() {
             fetchBookings("assigned"),
           ]);
 
+          const currentRequestIds = requests.map((booking) => booking._id);
+          const hasNewRequest =
+            currentRequestIds.length > lastRequestIds.length ||
+            currentRequestIds.some((id, index) => id !== lastRequestIds[index]);
+
           renderPorter(porter);
           renderRequests(requests);
           renderActiveJob(activeBookings[0]);
 
-          if (requestsHint) {
-            requestsHint.textContent =
-              requests.length > 0
-                ? "Respond to each request to continue."
-                : "Requests assigned to you will appear here.";
+          if (hasNewRequest && requests.length > 0) {
+            requestsList?.scrollIntoView({ behavior: "smooth", block: "start" });
           }
+
+          lastRequestIds = currentRequestIds;
         } catch (error) {
           if (requestsHint) {
             requestsHint.textContent =
@@ -346,6 +367,12 @@ export function PorterDashboardPage() {
         }
       };
 
+      if (refreshRequestsBtn) {
+        refreshRequestsBtn.onclick = () => {
+          void refreshDashboard();
+        };
+      }
+
       window.logout = () => {
         if (confirm("Are you sure you want to logout?")) {
           localStorage.removeItem("porterId");
@@ -361,7 +388,7 @@ export function PorterDashboardPage() {
         return () => {};
       }
 
-      const pollId = window.setInterval(refreshDashboard, 7000);
+      const pollId = window.setInterval(refreshDashboard, 3000);
       refreshDashboard();
 
       return () => {

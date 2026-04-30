@@ -357,7 +357,9 @@ export function BookPage() {
       const bookingFlowMessage = container.querySelector("#bookingFlowMessage");
       const bookingFlowMeta = container.querySelector("#bookingFlowMeta");
       const bookingFlowPrimary = container.querySelector("#bookingFlowPrimary");
-      const bookingFlowSecondary = container.querySelector("#bookingFlowSecondary");
+      const bookingFlowSecondary = container.querySelector(
+        "#bookingFlowSecondary",
+      );
 
       const closeBookingFlowModal = () => {
         if (!bookingFlowModal) {
@@ -492,7 +494,10 @@ export function BookPage() {
             return;
           }
 
-          if (booking.status === "assigned" && booking.paymentStatus !== "paid") {
+          if (
+            booking.status === "assigned" &&
+            booking.paymentStatus !== "paid"
+          ) {
             showPaymentPopup(booking);
             return;
           }
