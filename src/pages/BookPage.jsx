@@ -247,22 +247,6 @@ const BOOK_HTML = `
     </div>
   </div>
 </main>
-
-<div id="bookingFlowModal" class="booking-flow-modal hidden" aria-hidden="true">
-  <div class="booking-flow-backdrop"></div>
-  <div class="booking-flow-card" role="dialog" aria-modal="true" aria-labelledby="bookingFlowTitle">
-    <div class="booking-flow-badge" id="bookingFlowBadge">Waiting</div>
-    <h2 id="bookingFlowTitle" class="booking-flow-title">Waiting for porter to accept</h2>
-    <p id="bookingFlowMessage" class="booking-flow-message">
-      Your request has been sent. This popup will update when the porter responds.
-    </p>
-    <div id="bookingFlowMeta" class="booking-flow-meta"></div>
-    <div class="booking-flow-actions">
-      <button id="bookingFlowPrimary" class="btn btn-primary" type="button">Okay</button>
-      <button id="bookingFlowSecondary" class="btn btn-outline" type="button">Close</button>
-    </div>
-  </div>
-</div>
 `;
 
 export function BookPage() {
@@ -281,6 +265,7 @@ export function BookPage() {
       let bookingDraft = null;
       let bookingPollTimer = null;
       let activeBookingId = null;
+      let paymentRedirectedBookingId = null;
 
       const getScrollContainer = () => {
         const candidates = [
@@ -351,66 +336,41 @@ export function BookPage() {
         activeBookingId = booking._id || activeBookingId;
       };
 
-      const bookingFlowModal = container.querySelector("#bookingFlowModal");
-      const bookingFlowBadge = container.querySelector("#bookingFlowBadge");
-      const bookingFlowTitle = container.querySelector("#bookingFlowTitle");
-      const bookingFlowMessage = container.querySelector("#bookingFlowMessage");
-      const bookingFlowMeta = container.querySelector("#bookingFlowMeta");
-      const bookingFlowPrimary = container.querySelector("#bookingFlowPrimary");
-      const bookingFlowSecondary = container.querySelector(
-        "#bookingFlowSecondary",
-      );
-
-      const closeBookingFlowModal = () => {
-        if (!bookingFlowModal) {
-          return;
-        }
-
-        bookingFlowModal.classList.add("hidden");
-        bookingFlowModal.setAttribute("aria-hidden", "true");
-      };
-
-      const openBookingFlowModal = ({
-        badge,
+      const setInlineBookingStatus = ({
         title,
-        message,
-        meta,
-        primaryLabel,
-        secondaryLabel,
-        onPrimary,
+        subtitle,
+        status,
+        body,
+        actionHtml,
       }) => {
-        if (!bookingFlowModal) {
-          return;
+        const resultTitle = container.querySelector("#resultTitle");
+        const resultSubtitle = container.querySelector("#resultSubtitle");
+        const searchStatus = container.querySelector("#searchStatus");
+        const assignedBookingCard = container.querySelector(
+          "#assignedBookingCard",
+        );
+
+        if (resultTitle && title) {
+          resultTitle.textContent = title;
         }
 
-        if (bookingFlowBadge && badge) {
-          bookingFlowBadge.textContent = badge;
+        if (resultSubtitle && subtitle) {
+          resultSubtitle.textContent = subtitle;
         }
 
-        if (bookingFlowTitle && title) {
-          bookingFlowTitle.textContent = title;
+        if (searchStatus) {
+          searchStatus.textContent = status || "";
         }
 
-        if (bookingFlowMessage && message) {
-          bookingFlowMessage.textContent = message;
+        if (assignedBookingCard) {
+          assignedBookingCard.innerHTML = `
+            <div style="padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); line-height: 1.6; color: var(--muted);">
+              <div style="font-weight: 700; color: var(--white); margin-bottom: 6px;">${escapeHtml(title || "Booking update")}</div>
+              <div>${escapeHtml(body || "")}</div>
+              ${actionHtml || ""}
+            </div>
+          `;
         }
-
-        if (bookingFlowMeta) {
-          bookingFlowMeta.textContent = meta || "";
-        }
-
-        if (bookingFlowPrimary) {
-          bookingFlowPrimary.textContent = primaryLabel || "Okay";
-          bookingFlowPrimary.onclick = onPrimary || closeBookingFlowModal;
-        }
-
-        if (bookingFlowSecondary) {
-          bookingFlowSecondary.textContent = secondaryLabel || "Close";
-          bookingFlowSecondary.onclick = closeBookingFlowModal;
-        }
-
-        bookingFlowModal.classList.remove("hidden");
-        bookingFlowModal.setAttribute("aria-hidden", "false");
       };
 
       const showWaitingPopup = (booking) => {
@@ -418,17 +378,18 @@ export function BookPage() {
           return;
         }
 
-        openBookingFlowModal({
-          badge: "Waiting",
+        setInlineBookingStatus({
           title: "Waiting for porter to accept",
-          message:
-            "Your request has been sent. We are waiting for the porter to accept it from their dashboard.",
-          meta: `Booking ID: ${booking._id}`,
-          primaryLabel: "Check Status",
-          secondaryLabel: "Close",
-          onPrimary: () => {
-            void pollBookingStatus();
-          },
+          subtitle:
+            "Your request is live. We will keep checking for the porter response.",
+          status: `Booking ID: ${booking._id}`,
+          body: "This is a live request. Keep this page open or switch back to it and press Check Status if needed.",
+          actionHtml: `
+            <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary" onclick="window.__checkBookingStatus && window.__checkBookingStatus()">Check Status</button>
+              <button type="button" class="btn btn-outline" onclick="window.__clearBookingStatus && window.__clearBookingStatus()">Hide</button>
+            </div>
+          `,
         });
       };
 
@@ -440,18 +401,17 @@ export function BookPage() {
         const assignedPorter = booking.assignedPorter;
         const porterName = assignedPorter?.name || "your porter";
 
-        openBookingFlowModal({
-          badge: "Payment Required",
+        setInlineBookingStatus({
           title: "Porter accepted your request",
-          message:
-            "Please complete payment now. After payment, the porter can complete the booking from their dashboard.",
-          meta: `${porterName} is ready for service. Booking ID: ${booking._id}`,
-          primaryLabel: "Proceed to Payment",
-          secondaryLabel: "Keep Waiting",
-          onPrimary: () => {
-            localStorage.setItem("selectedBooking", JSON.stringify(booking));
-            navigate("/payment");
-          },
+          subtitle:
+            "Payment is now required before the porter can complete the booking.",
+          status: `${porterName} has accepted booking ID: ${booking._id}`,
+          body: "Proceed to payment now. Once payment is recorded, the porter can finish the job from their dashboard.",
+          actionHtml: `
+            <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-primary" onclick="window.__goToPayment && window.__goToPayment()">Proceed to Payment</button>
+            </div>
+          `,
         });
       };
 
@@ -463,13 +423,13 @@ export function BookPage() {
         const assignedPorter = booking.assignedPorter;
         const porterName = assignedPorter?.name || "your porter";
 
-        openBookingFlowModal({
-          badge: "Payment Received",
+        setInlineBookingStatus({
           title: "Payment successful",
-          message:
-            "The porter has been notified. They can now mark the job completed after finishing the service.",
-          meta: `${porterName} will update the job once the luggage handoff is complete.`,
-          primaryLabel: "Okay",
+          subtitle:
+            "The porter has been notified and can complete the booking now.",
+          status: `${porterName} is finishing the job.`,
+          body: `Payment recorded for booking ID: ${booking._id}. The porter may now mark the booking complete after service.`,
+          actionHtml: "",
         });
       };
 
@@ -503,6 +463,11 @@ export function BookPage() {
             booking.paymentStatus !== "paid"
           ) {
             showPaymentPopup(booking);
+            if (paymentRedirectedBookingId !== booking._id) {
+              paymentRedirectedBookingId = booking._id;
+              localStorage.setItem("selectedBooking", JSON.stringify(booking));
+              navigate("/payment");
+            }
             return;
           }
 
@@ -511,7 +476,7 @@ export function BookPage() {
             return;
           }
 
-          closeBookingFlowModal();
+          paymentRedirectedBookingId = null;
         } catch (error) {
           console.warn("Booking status poll failed:", error);
         }
@@ -678,6 +643,33 @@ export function BookPage() {
       };
 
       window.__selectedPorters = [];
+      window.__checkBookingStatus = () => {
+        void pollBookingStatus();
+      };
+      window.__clearBookingStatus = () => {
+        const assignedBookingCard = container.querySelector(
+          "#assignedBookingCard",
+        );
+        const searchStatus = container.querySelector("#searchStatus");
+
+        if (assignedBookingCard) {
+          assignedBookingCard.innerHTML = "";
+        }
+
+        if (searchStatus) {
+          searchStatus.textContent = "";
+        }
+      };
+      window.__goToPayment = () => {
+        const currentBooking = getCurrentBooking();
+        if (currentBooking?._id) {
+          localStorage.setItem(
+            "selectedBooking",
+            JSON.stringify(currentBooking),
+          );
+        }
+        navigate("/payment");
+      };
 
       const username = localStorage.getItem("username");
       if (username) {
@@ -878,8 +870,12 @@ export function BookPage() {
         window.selectPorter = previousFns.selectPorter;
         window.requestPorter = previousFns.requestPorter;
         window.__selectedPorters = [];
+        window.__checkBookingStatus = undefined;
+        window.__clearBookingStatus = undefined;
+        window.__goToPayment = undefined;
         bookingPollTimer = null;
         activeBookingId = null;
+        paymentRedirectedBookingId = null;
         htmlElement.classList.remove("book-page-html");
         bodyElement.classList.remove("book-page-body");
       };
