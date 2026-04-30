@@ -424,7 +424,11 @@ export function BookPage() {
           message:
             "Your request has been sent. We are waiting for the porter to accept it from their dashboard.",
           meta: `Booking ID: ${booking._id}`,
-          primaryLabel: "Close",
+          primaryLabel: "Check Status",
+          secondaryLabel: "Close",
+          onPrimary: () => {
+            void pollBookingStatus();
+          },
         });
       };
 
@@ -525,6 +529,16 @@ export function BookPage() {
 
         bookingPollTimer = window.setInterval(pollBookingStatus, 4000);
         void pollBookingStatus();
+      };
+
+      const onWindowFocus = () => {
+        void pollBookingStatus();
+      };
+
+      const onVisibilityChange = () => {
+        if (!document.hidden) {
+          void pollBookingStatus();
+        }
       };
 
       const showResultSection = () => {
@@ -678,6 +692,9 @@ export function BookPage() {
         activeBookingId = persistedBooking._id;
         startPollingBooking(persistedBooking);
       }
+
+      window.addEventListener("focus", onWindowFocus);
+      document.addEventListener("visibilitychange", onVisibilityChange);
 
       // Ensure the legacy page main area does not vertically center content
       // which can make the top unreachable when dynamic results expand.
@@ -854,6 +871,8 @@ export function BookPage() {
         if (bookingPollTimer) {
           window.clearInterval(bookingPollTimer);
         }
+        window.removeEventListener("focus", onWindowFocus);
+        document.removeEventListener("visibilitychange", onVisibilityChange);
         window.handleSearch = previousFns.handleSearch;
         window.logout = previousFns.logout;
         window.selectPorter = previousFns.selectPorter;

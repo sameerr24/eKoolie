@@ -175,9 +175,10 @@ export function PorterDashboardPage() {
         }
 
         if (requestsHint) {
-          requestsHint.textContent = requests.length > 0
-            ? `You have ${requests.length} active booking request${requests.length === 1 ? "" : "s"}.`
-            : "Requests assigned to you will appear here.";
+          requestsHint.textContent =
+            requests.length > 0
+              ? `You have ${requests.length} active booking request${requests.length === 1 ? "" : "s"}.`
+              : "Requests assigned to you will appear here.";
         }
 
         if (!requests.length) {
@@ -289,7 +290,10 @@ export function PorterDashboardPage() {
           renderActiveJob(activeBookings[0]);
 
           if (hasNewRequest && requests.length > 0) {
-            requestsList?.scrollIntoView({ behavior: "smooth", block: "start" });
+            requestsList?.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
           }
 
           lastRequestIds = currentRequestIds;
