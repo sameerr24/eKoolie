@@ -22,6 +22,7 @@ const connectDB = require("./config/database");
 const porterRoutes = require("./routes/porterRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const stationRoutes = require("./routes/stationRoutes");
+const bookingController = require("./controllers/bookingController");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -73,6 +74,10 @@ app.use("/api/porters", porterRoutes);
 
 // Booking routes
 app.use("/api/bookings", bookingRoutes);
+
+// Explicit route alias for booking requests so the porter-request flow keeps
+// working even if the router mount is replaced or cached during a restart.
+app.post("/api/bookings/request", bookingController.createBookingRequest);
 
 // Station reference routes
 app.use("/api/stations", stationRoutes);
