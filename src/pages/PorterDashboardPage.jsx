@@ -220,6 +220,9 @@ export function PorterDashboardPage() {
             <div class="active-meta">${escapeHtml(
               booking.specialRequests || "No details provided",
             )}</div>
+            <div class="active-meta">Payment: ${escapeHtml(
+              booking.paymentStatus || "unpaid",
+            )}</div>
             <div class="active-actions">
               <button class="btn btn-primary" onclick="completeBooking('${booking._id}')">Mark as Completed</button>
             </div>
@@ -282,11 +285,21 @@ export function PorterDashboardPage() {
           return;
         }
 
-        await fetch(
-          `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/accept`,
-          { method: "POST" },
-        );
-        await refreshDashboard();
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/accept`,
+            { method: "POST" },
+          );
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Unable to accept booking.");
+          }
+
+          await refreshDashboard();
+        } catch (error) {
+          alert(error.message || "Unable to accept booking.");
+        }
       };
 
       window.declineBooking = async (bookingId) => {
@@ -294,11 +307,21 @@ export function PorterDashboardPage() {
           return;
         }
 
-        await fetch(
-          `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/decline`,
-          { method: "POST" },
-        );
-        await refreshDashboard();
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/decline`,
+            { method: "POST" },
+          );
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Unable to decline booking.");
+          }
+
+          await refreshDashboard();
+        } catch (error) {
+          alert(error.message || "Unable to decline booking.");
+        }
       };
 
       window.completeBooking = async (bookingId) => {
@@ -306,11 +329,21 @@ export function PorterDashboardPage() {
           return;
         }
 
-        await fetch(
-          `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/complete`,
-          { method: "POST" },
-        );
-        await refreshDashboard();
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/complete`,
+            { method: "POST" },
+          );
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Unable to complete booking.");
+          }
+
+          await refreshDashboard();
+        } catch (error) {
+          alert(error.message || "Unable to complete booking.");
+        }
       };
 
       window.logout = () => {

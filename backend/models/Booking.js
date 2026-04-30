@@ -73,6 +73,12 @@ const bookingSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    paymentStatus: {
+      type: String,
+      enum: ["unpaid", "pending", "paid"],
+      default: "unpaid",
+    },
+
     /**
      * REFERENCE TO PORTER (ObjectId)
      *

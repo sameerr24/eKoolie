@@ -56,6 +56,7 @@ exports.createBooking = async (req, res) => {
       estimatedFare,
       specialRequests: specialRequests || "",
       status: "pending",
+      paymentStatus: "unpaid",
     });
 
     const savedBooking = await newBooking.save();
@@ -130,6 +131,7 @@ exports.createBookingRequest = async (req, res) => {
       estimatedFare,
       specialRequests: specialRequests || "",
       status: "requested",
+      paymentStatus: "unpaid",
       assignedPorter,
     });
 
@@ -501,6 +503,7 @@ exports.assignBestPorter = async (req, res) => {
       {
         assignedPorter: bestPorter._id,
         status: "assigned",
+        paymentStatus: "pending",
       },
       { new: true },
     ).populate("assignedPorter");
@@ -628,6 +631,42 @@ exports.updateBookingStatus = async (req, res) => {
 
     res.json({
       message: "Booking status updated",
+      data: updatedBooking,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * ========================================
+ * 8. MARK BOOKING AS PAID
+ * ========================================
+ */
+exports.markBookingAsPaid = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    if (booking.paymentStatus === "paid") {
+      return res.json({
+        message: "Booking already paid",
+        data: booking,
+      });
+    }
+
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      bookingId,
+      { paymentStatus: "paid" },
+      { new: true },
+    ).populate("assignedPorter");
+
+    res.json({
+      message: "Payment recorded successfully",
       data: updatedBooking,
     });
   } catch (error) {

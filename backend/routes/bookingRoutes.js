@@ -69,6 +69,12 @@ router.post(
 );
 
 /**
+ * POST /bookings/:bookingId/payment
+ * Mark a booking as paid after the user completes payment
+ */
+router.post("/:bookingId/payment", bookingController.markBookingAsPaid);
+
+/**
  * POST /bookings/:bookingId/items
  * Add an item to booking (demonstrates $push array operation)
  */

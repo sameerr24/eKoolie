@@ -247,6 +247,22 @@ const BOOK_HTML = `
     </div>
   </div>
 </main>
+
+<div id="bookingFlowModal" class="booking-flow-modal hidden" aria-hidden="true">
+  <div class="booking-flow-backdrop"></div>
+  <div class="booking-flow-card" role="dialog" aria-modal="true" aria-labelledby="bookingFlowTitle">
+    <div class="booking-flow-badge" id="bookingFlowBadge">Waiting</div>
+    <h2 id="bookingFlowTitle" class="booking-flow-title">Waiting for porter to accept</h2>
+    <p id="bookingFlowMessage" class="booking-flow-message">
+      Your request has been sent. This popup will update when the porter responds.
+    </p>
+    <div id="bookingFlowMeta" class="booking-flow-meta"></div>
+    <div class="booking-flow-actions">
+      <button id="bookingFlowPrimary" class="btn btn-primary" type="button">Okay</button>
+      <button id="bookingFlowSecondary" class="btn btn-outline" type="button">Close</button>
+    </div>
+  </div>
+</div>
 `;
 
 export function BookPage() {
@@ -263,6 +279,8 @@ export function BookPage() {
       };
 
       let bookingDraft = null;
+      let bookingPollTimer = null;
+      let activeBookingId = null;
 
       const getScrollContainer = () => {
         const candidates = [
@@ -311,6 +329,197 @@ export function BookPage() {
         button.innerText = text;
         button.disabled = isLoading;
         button.style.opacity = isLoading ? "0.7" : "1";
+      };
+
+      const getCurrentBooking = () => {
+        try {
+          return JSON.parse(
+            localStorage.getItem("latestBookingRequest") || "null",
+          );
+        } catch (error) {
+          return null;
+        }
+      };
+
+      const saveCurrentBooking = (booking) => {
+        if (!booking) {
+          return;
+        }
+
+        localStorage.setItem("latestBookingRequest", JSON.stringify(booking));
+        localStorage.setItem("selectedBooking", JSON.stringify(booking));
+        activeBookingId = booking._id || activeBookingId;
+      };
+
+      const bookingFlowModal = container.querySelector("#bookingFlowModal");
+      const bookingFlowBadge = container.querySelector("#bookingFlowBadge");
+      const bookingFlowTitle = container.querySelector("#bookingFlowTitle");
+      const bookingFlowMessage = container.querySelector("#bookingFlowMessage");
+      const bookingFlowMeta = container.querySelector("#bookingFlowMeta");
+      const bookingFlowPrimary = container.querySelector("#bookingFlowPrimary");
+      const bookingFlowSecondary = container.querySelector("#bookingFlowSecondary");
+
+      const closeBookingFlowModal = () => {
+        if (!bookingFlowModal) {
+          return;
+        }
+
+        bookingFlowModal.classList.add("hidden");
+        bookingFlowModal.setAttribute("aria-hidden", "true");
+      };
+
+      const openBookingFlowModal = ({
+        badge,
+        title,
+        message,
+        meta,
+        primaryLabel,
+        secondaryLabel,
+        onPrimary,
+      }) => {
+        if (!bookingFlowModal) {
+          return;
+        }
+
+        if (bookingFlowBadge && badge) {
+          bookingFlowBadge.textContent = badge;
+        }
+
+        if (bookingFlowTitle && title) {
+          bookingFlowTitle.textContent = title;
+        }
+
+        if (bookingFlowMessage && message) {
+          bookingFlowMessage.textContent = message;
+        }
+
+        if (bookingFlowMeta) {
+          bookingFlowMeta.textContent = meta || "";
+        }
+
+        if (bookingFlowPrimary) {
+          bookingFlowPrimary.textContent = primaryLabel || "Okay";
+          bookingFlowPrimary.onclick = onPrimary || closeBookingFlowModal;
+        }
+
+        if (bookingFlowSecondary) {
+          bookingFlowSecondary.textContent = secondaryLabel || "Close";
+          bookingFlowSecondary.onclick = closeBookingFlowModal;
+        }
+
+        bookingFlowModal.classList.remove("hidden");
+        bookingFlowModal.setAttribute("aria-hidden", "false");
+      };
+
+      const showWaitingPopup = (booking) => {
+        if (!booking) {
+          return;
+        }
+
+        openBookingFlowModal({
+          badge: "Waiting",
+          title: "Waiting for porter to accept",
+          message:
+            "Your request has been sent. We are waiting for the porter to accept it from their dashboard.",
+          meta: `Booking ID: ${booking._id}`,
+          primaryLabel: "Close",
+        });
+      };
+
+      const showPaymentPopup = (booking) => {
+        if (!booking) {
+          return;
+        }
+
+        const assignedPorter = booking.assignedPorter;
+        const porterName = assignedPorter?.name || "your porter";
+
+        openBookingFlowModal({
+          badge: "Payment Required",
+          title: "Porter accepted your request",
+          message:
+            "Please complete payment now. After payment, the porter can complete the booking from their dashboard.",
+          meta: `${porterName} is ready for service. Booking ID: ${booking._id}`,
+          primaryLabel: "Proceed to Payment",
+          secondaryLabel: "Keep Waiting",
+          onPrimary: () => {
+            localStorage.setItem("selectedBooking", JSON.stringify(booking));
+            navigate("/payment");
+          },
+        });
+      };
+
+      const showPaymentCompletePopup = (booking) => {
+        if (!booking) {
+          return;
+        }
+
+        const assignedPorter = booking.assignedPorter;
+        const porterName = assignedPorter?.name || "your porter";
+
+        openBookingFlowModal({
+          badge: "Payment Received",
+          title: "Payment successful",
+          message:
+            "The porter has been notified. They can now mark the job completed after finishing the service.",
+          meta: `${porterName} will update the job once the luggage handoff is complete.`,
+          primaryLabel: "Okay",
+        });
+      };
+
+      const pollBookingStatus = async () => {
+        const bookingId = activeBookingId || getCurrentBooking()?._id;
+        if (!bookingId) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
+          if (!response.ok) {
+            return;
+          }
+
+          const payload = await response.json();
+          const booking = payload.data;
+          if (!booking) {
+            return;
+          }
+
+          saveCurrentBooking(booking);
+
+          if (booking.status === "requested") {
+            showWaitingPopup(booking);
+            return;
+          }
+
+          if (booking.status === "assigned" && booking.paymentStatus !== "paid") {
+            showPaymentPopup(booking);
+            return;
+          }
+
+          if (booking.paymentStatus === "paid") {
+            showPaymentCompletePopup(booking);
+            return;
+          }
+
+          closeBookingFlowModal();
+        } catch (error) {
+          console.warn("Booking status poll failed:", error);
+        }
+      };
+
+      const startPollingBooking = (booking) => {
+        if (!booking) {
+          return;
+        }
+
+        activeBookingId = booking._id;
+        if (bookingPollTimer) {
+          window.clearInterval(bookingPollTimer);
+        }
+
+        bookingPollTimer = window.setInterval(pollBookingStatus, 4000);
+        void pollBookingStatus();
       };
 
       const showResultSection = () => {
@@ -433,15 +642,14 @@ export function BookPage() {
           }
 
           const payload = await response.json();
-          localStorage.setItem(
-            "latestBookingRequest",
-            JSON.stringify(payload.data),
-          );
+          saveCurrentBooking(payload.data);
 
           showSearchStatus(
             `Request sent to ${porterState.name}. Wait for them to accept in their dashboard.`,
             false,
           );
+          showWaitingPopup(payload.data);
+          startPollingBooking(payload.data);
         } catch (error) {
           showSearchStatus(
             error.message || "Unable to send booking request.",
@@ -458,6 +666,12 @@ export function BookPage() {
         if (greetingElement) {
           greetingElement.textContent = `Hello ${username}`;
         }
+      }
+
+      const persistedBooking = getCurrentBooking();
+      if (persistedBooking?._id) {
+        activeBookingId = persistedBooking._id;
+        startPollingBooking(persistedBooking);
       }
 
       // Ensure the legacy page main area does not vertically center content
@@ -625,16 +839,23 @@ export function BookPage() {
       window.logout = () => {
         if (confirm("Are you sure you want to logout?")) {
           localStorage.removeItem("username");
+          localStorage.removeItem("latestBookingRequest");
+          localStorage.removeItem("selectedBooking");
           navigate("/home");
         }
       };
 
       return () => {
+        if (bookingPollTimer) {
+          window.clearInterval(bookingPollTimer);
+        }
         window.handleSearch = previousFns.handleSearch;
         window.logout = previousFns.logout;
         window.selectPorter = previousFns.selectPorter;
         window.requestPorter = previousFns.requestPorter;
         window.__selectedPorters = [];
+        bookingPollTimer = null;
+        activeBookingId = null;
         htmlElement.classList.remove("book-page-html");
         bodyElement.classList.remove("book-page-body");
       };

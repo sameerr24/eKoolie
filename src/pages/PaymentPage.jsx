@@ -2,6 +2,10 @@ import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLegacyPage } from "../legacy/useLegacyPage";
 
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://localhost:5001/api";
+
 const PAYMENT_HTML = `
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -78,7 +82,15 @@ export function PaymentPage() {
         return null;
       }
     })();
-    const bookingFare = selectedBooking?.estimatedFare;
+    const latestBooking = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("latestBookingRequest") || "null");
+      } catch (error) {
+        return null;
+      }
+    })();
+    const bookingRecord = selectedBooking || latestBooking;
+    const bookingFare = bookingRecord?.estimatedFare;
     const platformFee = 20;
     const totalAmount = (bookingFare ?? porterFare) + platformFee;
 
@@ -111,9 +123,48 @@ export function PaymentPage() {
     };
 
     window.completePayment = () => {
-      alert("Payment Successful! Your porter is confirmed.");
-      localStorage.removeItem("selectedPorter");
-      navigate("/book");
+      const bookingId = bookingRecord?._id;
+
+      if (!bookingId) {
+        alert("No active booking found.");
+        return;
+      }
+
+      fetch(`${API_BASE_URL}/bookings/${bookingId}/payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentMethod:
+            document.querySelector(".method-option.selected span")?.textContent?.trim() ||
+            "UPI / QR Code",
+          amount: totalAmount,
+        }),
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Payment could not be recorded.");
+          }
+
+          return response.json();
+        })
+        .then((payload) => {
+          localStorage.setItem(
+            "latestBookingRequest",
+            JSON.stringify(payload.data),
+          );
+          localStorage.setItem("selectedBooking", JSON.stringify(payload.data));
+          alert(
+            "Payment successful. The porter can now complete the booking from their dashboard.",
+          );
+          localStorage.removeItem("selectedPorter");
+          navigate("/book");
+        })
+        .catch((error) => {
+          alert(error.message || "Payment failed.");
+        });
     };
 
     return () => {

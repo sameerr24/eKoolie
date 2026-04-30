@@ -539,6 +539,12 @@ exports.completeBooking = async (req, res) => {
       return res.status(404).json({ error: "Booking not found" });
     }
 
+    if (booking.paymentStatus !== "paid") {
+      return res.status(400).json({
+        error: "Payment must be completed before marking the booking completed",
+      });
+    }
+
     if (!["assigned", "in_progress"].includes(booking.status)) {
       return res
         .status(400)
