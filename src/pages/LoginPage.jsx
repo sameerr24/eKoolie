@@ -2,6 +2,10 @@ import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLegacyPage } from "../legacy/useLegacyPage";
 
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://localhost:5001/api";
+
 const LOGIN_HTML = `
 <div class="container">
   <div class="logo">
@@ -21,7 +25,7 @@ const LOGIN_HTML = `
         <span class="error-msg" id="loginUsernameError">Username is required</span>
       </div>
 
-      <div class="input-group">
+      <div class="input-group" id="loginEmailGroup">
         <label class="label">Email:</label>
         <input type="email" class="input" id="loginEmail" placeholder="sameer@domain.com" required />
         <span class="error-msg" id="loginEmailError">Please enter a valid email</span>
@@ -135,6 +139,8 @@ export function LoginPage() {
         const registerLink = container.querySelector(
           "#loginForm .switch-text:first-of-type",
         );
+        const emailGroup = container.querySelector("#loginEmailGroup");
+        const emailInput = container.querySelector("#loginEmail");
 
         if (!title || !toggleText || !registerLink) {
           return;
@@ -144,10 +150,22 @@ export function LoginPage() {
           title.textContent = "Porter Login";
           toggleText.textContent = "Login as User";
           registerLink.style.display = "none";
+          if (emailGroup) {
+            emailGroup.style.display = "none";
+          }
+          if (emailInput) {
+            emailInput.removeAttribute("required");
+          }
         } else {
           title.textContent = "Login";
           toggleText.textContent = "Login as Porter";
           registerLink.style.display = "block";
+          if (emailGroup) {
+            emailGroup.style.display = "block";
+          }
+          if (emailInput) {
+            emailInput.setAttribute("required", "");
+          }
         }
       };
 
@@ -185,7 +203,7 @@ export function LoginPage() {
         );
       };
 
-      window.handleLogin = (event) => {
+      window.handleLogin = async (event) => {
         event.preventDefault();
 
         const username = container.querySelector("#loginUsername")?.value || "";
@@ -201,11 +219,13 @@ export function LoginPage() {
           toggleError("loginUsername", false);
         }
 
-        if (!email || !email.includes("@")) {
-          toggleError("loginEmail", true);
-          isValid = false;
-        } else {
-          toggleError("loginEmail", false);
+        if (!isPorterLogin) {
+          if (!email || !email.includes("@")) {
+            toggleError("loginEmail", true);
+            isValid = false;
+          } else {
+            toggleError("loginEmail", false);
+          }
         }
 
         if (!password || password.length < 6) {
@@ -216,8 +236,43 @@ export function LoginPage() {
         }
 
         if (isValid) {
-          localStorage.setItem("username", username);
-          navigate(isPorterLogin ? "/porter-dashboard" : "/book");
+          if (isPorterLogin) {
+            try {
+              const response = await fetch(`${API_BASE_URL}/porters/login`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  username,
+                  password,
+                }),
+              });
+
+              if (!response.ok) {
+                const payload = await response.json().catch(() => ({}));
+                alert(payload.error || "Invalid porter credentials.");
+                return false;
+              }
+
+              const payload = await response.json();
+              const porter = payload.data;
+
+              localStorage.setItem("porterId", porter.id);
+              localStorage.setItem("porterName", porter.name || username);
+              localStorage.setItem(
+                "porterUsername",
+                porter.username || username,
+              );
+              navigate("/porter-dashboard");
+            } catch (error) {
+              alert("Unable to reach the server. Please try again.");
+              return false;
+            }
+          } else {
+            localStorage.setItem("username", username);
+            navigate("/book");
+          }
         }
 
         return false;

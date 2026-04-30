@@ -105,9 +105,15 @@
   animation: radar 2s infinite linear;
 }
 
-.radar-circle:nth-child(1) { animation-delay: 0s; }
-.radar-circle:nth-child(2) { animation-delay: 0.6s; }
-.radar-circle:nth-child(3) { animation-delay: 1.2s; }
+.radar-circle:nth-child(1) {
+  animation-delay: 0s;
+}
+.radar-circle:nth-child(2) {
+  animation-delay: 0.6s;
+}
+.radar-circle:nth-child(3) {
+  animation-delay: 1.2s;
+}
 
 @keyframes radar {
   0% {
@@ -215,4 +221,120 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.skills-panel {
+  padding: 20px 24px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(26, 26, 26, 0.9), #111111);
+  border: 1px solid var(--glass-border);
+  margin-bottom: 32px;
+}
+
+.skills-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--white);
+}
+
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.skill-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(6, 182, 212, 0.12);
+  color: var(--white);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.request-card {
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.request-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.request-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--white);
+}
+
+.request-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.request-fare {
+  font-weight: 700;
+  color: #10b981;
+  font-size: 16px;
+}
+
+.request-meta {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.request-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.request-empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.active-job {
+  margin-top: 24px;
+}
+
+.active-card {
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  text-align: left;
+}
+
+.active-title {
+  font-weight: 700;
+  color: var(--white);
+  margin-bottom: 8px;
+}
+
+.active-meta {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.active-actions {
+  margin-top: 12px;
 }

@@ -2,6 +2,10 @@ import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLegacyPage } from "../legacy/useLegacyPage";
 
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
+  "http://localhost:5001/api";
+
 const DASHBOARD_HTML = `
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -47,53 +51,34 @@ const DASHBOARD_HTML = `
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-title">Today's Earnings</div>
-      <div class="stat-value" id="todayEarningsValue">₹850</div>
-      <div class="stat-trend positive">+12% from yesterday</div>
+      <div class="stat-title">Total Earnings</div>
+      <div class="stat-value" id="totalEarningsValue">₹0</div>
+      <div class="stat-trend">Updated from live bookings</div>
     </div>
     <div class="stat-card">
       <div class="stat-title">Jobs Completed</div>
-      <div class="stat-value" id="jobsCompletedValue">5</div>
-      <div class="stat-trend">Target: 8</div>
+      <div class="stat-value" id="jobsCompletedValue">0</div>
+      <div class="stat-trend">Live count from database</div>
     </div>
     <div class="stat-card">
       <div class="stat-title">Rating</div>
-      <div class="stat-value">4.9 ⭐</div>
-      <div class="stat-trend">Excellent</div>
+      <div class="stat-value" id="ratingValue">--</div>
+      <div class="stat-trend">Customer feedback</div>
     </div>
+  </div>
+
+  <div class="skills-panel">
+    <div class="skills-title">Skills</div>
+    <div id="skillsList" class="skills-list"></div>
   </div>
 
   <div class="status-area">
-    <div class="radar-animation">
-      <div class="radar-circle"></div>
-      <div class="radar-circle"></div>
-      <div class="radar-circle"></div>
-      <div class="radar-icon">📡</div>
-    </div>
-    <h2>Searching for nearby passengers...</h2>
-    <p style="color: var(--muted)">Stay on this page to receive job notifications.</p>
-  </div>
-
-  <div id="jobModal" class="modal-overlay hidden">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div class="modal-title">New Job Assignment! 🔔</div>
-        <span class="time-badge">Just now</span>
-      </div>
-
-      <div class="job-details">
-        <div class="detail-row"><span class="detail-label">Platform</span><span class="detail-value">Platform 4</span></div>
-        <div class="detail-row"><span class="detail-label">Train</span><span class="detail-value">12951 - Rajdhani Exp</span></div>
-        <div class="detail-row"><span class="detail-label">Coach/Seat</span><span class="detail-value">B2 / 45</span></div>
-        <div class="detail-row"><span class="detail-label">Arrival Time</span><span class="detail-value">14:30 (in 15 mins)</span></div>
-        <div class="detail-row"><span class="detail-label">Est. Earning</span><span class="detail-value highlight">₹150</span></div>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn btn-outline" onclick="declineJob()">Decline</button>
-        <button class="btn btn-primary" onclick="acceptJob()">Accept Job</button>
-      </div>
-    </div>
+    <h2>Incoming Booking Requests</h2>
+    <p id="requestsHint" style="color: var(--muted)">
+      Requests assigned to you will appear here.
+    </p>
+    <div id="requestsList" class="requests-list"></div>
+    <div id="activeJob" class="active-job hidden"></div>
   </div>
 </main>
 `;
@@ -104,195 +89,253 @@ export function PorterDashboardPage() {
 
   const setup = useCallback(
     ({ container }) => {
-      const DASHBOARD_STATS_KEY = "porterDashboardStats";
-      const DEFAULT_DASHBOARD_STATS = { todaysEarnings: 850, jobsCompleted: 5 };
-      const NEXT_JOB_NOTIFICATION_DELAY_MS = 6000;
-      const CURRENT_JOB = {
-        platform: "Platform 4",
-        train: "12951 - Rajdhani Exp",
-        earning: 150,
-      };
-
-      let activeAcceptedJob = null;
-      const timeouts = [];
-
       const previousFns = {
-        acceptJob: window.acceptJob,
-        declineJob: window.declineJob,
-        completeJob: window.completeJob,
+        acceptBooking: window.acceptBooking,
+        declineBooking: window.declineBooking,
+        completeBooking: window.completeBooking,
         logout: window.logout,
       };
+      const porterId = localStorage.getItem("porterId");
+      const porterNameFallback = localStorage.getItem("porterName");
+      const requestsList = container.querySelector("#requestsList");
+      const requestsHint = container.querySelector("#requestsHint");
+      const activeJob = container.querySelector("#activeJob");
 
-      const queueTimeout = (fn, delay) => {
-        const id = window.setTimeout(fn, delay);
-        timeouts.push(id);
-      };
+      const escapeHtml = (value) =>
+        String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
 
-      const getDashboardStats = () => {
-        const savedStats = localStorage.getItem(DASHBOARD_STATS_KEY);
-
-        if (!savedStats) {
-          localStorage.setItem(
-            DASHBOARD_STATS_KEY,
-            JSON.stringify(DEFAULT_DASHBOARD_STATS),
-          );
-          return { ...DEFAULT_DASHBOARD_STATS };
+      const renderSkills = (skills = []) => {
+        const skillsList = container.querySelector("#skillsList");
+        if (!skillsList) {
+          return;
         }
 
-        try {
-          const parsedStats = JSON.parse(savedStats);
-          return {
-            todaysEarnings:
-              typeof parsedStats.todaysEarnings === "number"
-                ? parsedStats.todaysEarnings
-                : DEFAULT_DASHBOARD_STATS.todaysEarnings,
-            jobsCompleted:
-              typeof parsedStats.jobsCompleted === "number"
-                ? parsedStats.jobsCompleted
-                : DEFAULT_DASHBOARD_STATS.jobsCompleted,
-          };
-        } catch (error) {
-          localStorage.setItem(
-            DASHBOARD_STATS_KEY,
-            JSON.stringify(DEFAULT_DASHBOARD_STATS),
-          );
-          return { ...DEFAULT_DASHBOARD_STATS };
+        if (!skills.length) {
+          skillsList.innerHTML =
+            '<span class="skill-chip">No skills listed</span>';
+          return;
         }
+
+        skillsList.innerHTML = skills
+          .map(
+            (skill) => `<span class="skill-chip">${escapeHtml(skill)}</span>`,
+          )
+          .join("");
       };
 
-      const saveDashboardStats = (stats) => {
-        localStorage.setItem(DASHBOARD_STATS_KEY, JSON.stringify(stats));
-      };
-
-      const renderDashboardStats = () => {
-        const stats = getDashboardStats();
-        const earningsValue = container.querySelector("#todayEarningsValue");
+      const renderPorter = (porter) => {
+        const porterName = container.querySelector("#porterName");
+        const earningsValue = container.querySelector("#totalEarningsValue");
         const jobsCompletedValue = container.querySelector(
           "#jobsCompletedValue",
         );
+        const ratingValue = container.querySelector("#ratingValue");
+
+        if (porterName) {
+          porterName.textContent =
+            porter?.name || porterNameFallback || "Partner";
+        }
 
         if (earningsValue) {
-          earningsValue.textContent = `₹${stats.todaysEarnings}`;
+          earningsValue.textContent = `₹${porter?.earnings ?? 0}`;
         }
 
         if (jobsCompletedValue) {
-          jobsCompletedValue.textContent = stats.jobsCompleted;
+          jobsCompletedValue.textContent = porter?.completedBookings ?? 0;
         }
+
+        if (ratingValue) {
+          ratingValue.textContent = porter?.rating
+            ? `${porter.rating} ⭐`
+            : "--";
+        }
+
+        renderSkills(porter?.skills || []);
       };
 
-      const showJobNotification = () => {
-        const modal = container.querySelector("#jobModal");
-        if (!modal) {
+      const renderRequests = (requests = []) => {
+        if (!requestsList) {
           return;
         }
 
-        modal.classList.remove("hidden");
-        void modal.offsetWidth;
-        modal.classList.add("show");
-
-        try {
-          const audio = new Audio(
-            "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3",
-          );
-          audio.play().catch(() => {});
-        } catch (error) {
-          console.log("Audio error");
-        }
-      };
-
-      window.acceptJob = () => {
-        activeAcceptedJob = { ...CURRENT_JOB };
-        alert(`Job Accepted! Proceed to ${activeAcceptedJob.platform}.`);
-
-        const modal = container.querySelector("#jobModal");
-        modal?.classList.remove("show");
-        queueTimeout(() => {
-          modal?.classList.add("hidden");
-        }, 300);
-
-        const statusArea = container.querySelector(".status-area");
-        if (!statusArea) {
+        if (!requests.length) {
+          requestsList.innerHTML =
+            '<div class="request-empty">No new requests right now.</div>';
           return;
         }
 
-        statusArea.innerHTML = `
-          <div style="text-align: center">
-            <div style="font-size: 48px; margin-bottom: 16px">🏃</div>
-            <h2>Job in Progress</h2>
-            <p style="color: var(--muted)">Head to ${activeAcceptedJob.platform} for ${activeAcceptedJob.train}</p>
-            <button id="completeBtn" class="btn btn-primary" style="margin-top: 16px" onclick="completeJob()">Mark as Completed</button>
+        requestsList.innerHTML = requests
+          .map(
+            (booking) => `
+              <div class="request-card">
+                <div class="request-header">
+                  <div>
+                    <div class="request-title">${escapeHtml(
+                      booking.station || "Station",
+                    )}</div>
+                    <div class="request-sub">${escapeHtml(
+                      booking.userId || "User",
+                    )} • ${escapeHtml(booking.userPhone || "")}</div>
+                  </div>
+                  <div class="request-fare">₹${escapeHtml(
+                    booking.estimatedFare ?? 0,
+                  )}</div>
+                </div>
+                <div class="request-meta">${escapeHtml(
+                  booking.specialRequests || "No additional notes",
+                )}</div>
+                <div class="request-actions">
+                  <button class="btn btn-outline" onclick="declineBooking('${booking._id}')">Decline</button>
+                  <button class="btn btn-primary" onclick="acceptBooking('${booking._id}')">Accept</button>
+                </div>
+              </div>
+            `,
+          )
+          .join("");
+      };
+
+      const renderActiveJob = (booking) => {
+        if (!activeJob) {
+          return;
+        }
+
+        if (!booking) {
+          activeJob.classList.add("hidden");
+          activeJob.innerHTML = "";
+          return;
+        }
+
+        activeJob.classList.remove("hidden");
+        activeJob.innerHTML = `
+          <div class="active-card">
+            <div class="active-title">Current Booking</div>
+            <div class="active-meta">${escapeHtml(
+              booking.station || "Station",
+            )}</div>
+            <div class="active-meta">${escapeHtml(
+              booking.specialRequests || "No details provided",
+            )}</div>
+            <div class="active-actions">
+              <button class="btn btn-primary" onclick="completeBooking('${booking._id}')">Mark as Completed</button>
+            </div>
           </div>
         `;
       };
 
-      window.declineJob = () => {
-        const modal = container.querySelector("#jobModal");
-        modal?.classList.remove("show");
-        queueTimeout(() => {
-          modal?.classList.add("hidden");
-        }, 300);
-
-        queueTimeout(showJobNotification, NEXT_JOB_NOTIFICATION_DELAY_MS);
+      const fetchPorter = async () => {
+        const response = await fetch(`${API_BASE_URL}/porters/${porterId}`);
+        if (!response.ok) {
+          throw new Error("Unable to load porter profile");
+        }
+        const payload = await response.json();
+        return payload.data;
       };
 
-      window.completeJob = () => {
-        if (!activeAcceptedJob) {
-          alert("Please accept a job first.");
+      const fetchBookings = async (status) => {
+        const response = await fetch(
+          `${API_BASE_URL}/porters/${porterId}/bookings?status=${encodeURIComponent(status)}`,
+        );
+        if (!response.ok) {
+          throw new Error("Unable to load bookings");
+        }
+        const payload = await response.json();
+        return payload.data || [];
+      };
+
+      const refreshDashboard = async () => {
+        if (!porterId) {
           return;
         }
 
-        const stats = getDashboardStats();
-        stats.jobsCompleted += 1;
-        stats.todaysEarnings += activeAcceptedJob.earning;
-        saveDashboardStats(stats);
-        renderDashboardStats();
+        try {
+          const [porter, requests, activeBookings] = await Promise.all([
+            fetchPorter(),
+            fetchBookings("requested"),
+            fetchBookings("assigned"),
+          ]);
 
-        alert(`Great job! ₹${activeAcceptedJob.earning} added to your wallet.`);
+          renderPorter(porter);
+          renderRequests(requests);
+          renderActiveJob(activeBookings[0]);
 
-        activeAcceptedJob = null;
+          if (requestsHint) {
+            requestsHint.textContent =
+              requests.length > 0
+                ? "Respond to each request to continue."
+                : "Requests assigned to you will appear here.";
+          }
+        } catch (error) {
+          if (requestsHint) {
+            requestsHint.textContent =
+              error.message || "Unable to load dashboard data.";
+          }
+        }
+      };
 
-        const statusArea = container.querySelector(".status-area");
-        if (statusArea) {
-          statusArea.innerHTML = `
-            <div class="radar-animation">
-              <div class="radar-circle"></div>
-              <div class="radar-circle"></div>
-              <div class="radar-circle"></div>
-              <div class="radar-icon">📡</div>
-            </div>
-            <h2>Searching for nearby passengers...</h2>
-            <p style="color: var(--muted)">
-              Stay on this page to receive job notifications.
-            </p>
-          `;
+      window.acceptBooking = async (bookingId) => {
+        if (!porterId) {
+          return;
         }
 
-        queueTimeout(showJobNotification, NEXT_JOB_NOTIFICATION_DELAY_MS);
+        await fetch(
+          `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/accept`,
+          { method: "POST" },
+        );
+        await refreshDashboard();
+      };
+
+      window.declineBooking = async (bookingId) => {
+        if (!porterId) {
+          return;
+        }
+
+        await fetch(
+          `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/decline`,
+          { method: "POST" },
+        );
+        await refreshDashboard();
+      };
+
+      window.completeBooking = async (bookingId) => {
+        if (!porterId) {
+          return;
+        }
+
+        await fetch(
+          `${API_BASE_URL}/porters/${porterId}/bookings/${bookingId}/complete`,
+          { method: "POST" },
+        );
+        await refreshDashboard();
       };
 
       window.logout = () => {
         if (confirm("Are you sure you want to logout?")) {
-          localStorage.removeItem("username");
-          navigate("/home");
+          localStorage.removeItem("porterId");
+          localStorage.removeItem("porterName");
+          localStorage.removeItem("porterUsername");
+          navigate("/login");
         }
       };
 
-      const username = localStorage.getItem("username");
-      if (username) {
-        const porterName = container.querySelector("#porterName");
-        if (porterName) {
-          porterName.textContent = username;
-        }
+      if (!porterId) {
+        alert("Please login as a porter first.");
+        navigate("/login");
+        return () => {};
       }
 
-      renderDashboardStats();
-      queueTimeout(showJobNotification, NEXT_JOB_NOTIFICATION_DELAY_MS);
+      const pollId = window.setInterval(refreshDashboard, 7000);
+      refreshDashboard();
 
       return () => {
-        timeouts.forEach((id) => clearTimeout(id));
-        window.acceptJob = previousFns.acceptJob;
-        window.declineJob = previousFns.declineJob;
-        window.completeJob = previousFns.completeJob;
+        window.clearInterval(pollId);
+        window.acceptBooking = previousFns.acceptBooking;
+        window.declineBooking = previousFns.declineBooking;
+        window.completeBooking = previousFns.completeBooking;
         window.logout = previousFns.logout;
       };
     },

@@ -28,10 +28,14 @@ const PAYMENT_HTML = `
   <div class="card">
     <h2 style="margin-top: 0">Payment Details</h2>
 
+    <div style="margin-bottom: 16px; color: var(--muted); line-height: 1.5;">
+      Review the selected porter before confirming payment.
+    </div>
+
     <div class="payment-summary">
-      <div class="summary-row"><span>Porter Service (Sumit Kumar)</span><span>₹150</span></div>
+      <div class="summary-row"><span>Porter Service (<span id="paymentPorterName">Sumit Kumar</span>)</span><span id="paymentPorterFare">₹150</span></div>
       <div class="summary-row"><span>Platform Fee</span><span>₹20</span></div>
-      <div class="summary-row total"><span>Total Amount</span><span>₹170</span></div>
+      <div class="summary-row total"><span>Total Amount</span><span id="paymentTotalAmount">₹170</span></div>
     </div>
 
     <h3 style="font-size: 16px; margin-bottom: 16px">Select Payment Method</h3>
@@ -56,6 +60,49 @@ export function PaymentPage() {
       completePayment: window.completePayment,
     };
 
+    const selectedPorter = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("selectedPorter") || "null");
+      } catch (error) {
+        return null;
+      }
+    })();
+
+    const porterName =
+      selectedPorter?.name || selectedPorter?.porterName || "Sumit Kumar";
+    const porterFare = selectedPorter?.fare ?? 150;
+    const selectedBooking = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("selectedBooking") || "null");
+      } catch (error) {
+        return null;
+      }
+    })();
+    const bookingFare = selectedBooking?.estimatedFare;
+    const platformFee = 20;
+    const totalAmount = (bookingFare ?? porterFare) + platformFee;
+
+    const porterNameElement = document.querySelector("#paymentPorterName");
+    const porterFareElement = document.querySelector("#paymentPorterFare");
+    const totalAmountElement = document.querySelector("#paymentTotalAmount");
+    const payBtn = document.querySelector("#payBtn");
+
+    if (porterNameElement) {
+      porterNameElement.textContent = porterName;
+    }
+
+    if (porterFareElement) {
+      porterFareElement.textContent = `₹${bookingFare ?? porterFare}`;
+    }
+
+    if (totalAmountElement) {
+      totalAmountElement.textContent = `₹${totalAmount}`;
+    }
+
+    if (payBtn) {
+      payBtn.textContent = `Pay ₹${totalAmount}`;
+    }
+
     window.selectMethod = (element) => {
       document
         .querySelectorAll(".method-option")
@@ -65,6 +112,7 @@ export function PaymentPage() {
 
     window.completePayment = () => {
       alert("Payment Successful! Your porter is confirmed.");
+      localStorage.removeItem("selectedPorter");
       navigate("/book");
     };
 
