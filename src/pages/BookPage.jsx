@@ -7,6 +7,38 @@ const API_BASE_URL =
   "http://localhost:5001/api";
 
 const STATION_COORDINATES = {};
+const FALLBACK_STATIONS = [
+  {
+    name: "New Delhi Station",
+    city: "New Delhi",
+    coordinates: [77.209, 28.6139],
+  },
+  { name: "Mumbai Central", city: "Mumbai", coordinates: [72.8356, 18.9402] },
+  { name: "Howrah Junction", city: "Kolkata", coordinates: [88.2636, 22.5958] },
+  {
+    name: "Bengaluru City",
+    city: "Bengaluru",
+    coordinates: [77.5946, 12.9716],
+  },
+  { name: "Chennai Central", city: "Chennai", coordinates: [80.2707, 13.0827] },
+  {
+    name: "Hyderabad Deccan",
+    city: "Hyderabad",
+    coordinates: [78.4867, 17.385],
+  },
+  { name: "Pune Junction", city: "Pune", coordinates: [73.8567, 18.5204] },
+  {
+    name: "Ahmedabad Junction",
+    city: "Ahmedabad",
+    coordinates: [72.5714, 23.0225],
+  },
+  {
+    name: "Lucknow Charbagh",
+    city: "Lucknow",
+    coordinates: [80.9462, 26.8467],
+  },
+  { name: "Patiala Station", city: "Patiala", coordinates: [76.3869, 30.3398] },
+];
 
 function escapeHtml(value) {
   return String(value)
@@ -703,15 +735,23 @@ export function BookPage() {
       (async function fetchAndPopulateStations() {
         try {
           const resp = await fetch(`${API_BASE_URL}/stations`);
-          if (!resp.ok) return;
-          const payload = await resp.json();
-          const stations = Array.isArray(payload.data) ? payload.data : [];
+          const payload = resp.ok ? await resp.json() : {};
+          const stations =
+            Array.isArray(payload.data) && payload.data.length > 0
+              ? payload.data
+              : FALLBACK_STATIONS;
           const stationSelect = container.querySelector("#station");
           if (!stationSelect) return;
 
+          if (!resp.ok) {
+            console.warn(
+              "Using fallback stations because the backend station list was unavailable.",
+            );
+          }
+
           stations.forEach((s) => {
             const name = s.name;
-            const coords = s.location?.coordinates;
+            const coords = s.location?.coordinates || s.coordinates;
             // populate global lookup used by getStationCoordinates
             if (Array.isArray(coords) && coords.length === 2) {
               STATION_COORDINATES[name] = coords;
@@ -723,6 +763,16 @@ export function BookPage() {
           });
         } catch (err) {
           console.warn("Failed to load stations for dropdown", err);
+          const stationSelect = container.querySelector("#station");
+          if (!stationSelect) return;
+
+          FALLBACK_STATIONS.forEach((s) => {
+            STATION_COORDINATES[s.name] = s.coordinates;
+            const opt = document.createElement("option");
+            opt.value = s.name;
+            opt.textContent = `${s.name} — ${s.city}`;
+            stationSelect.appendChild(opt);
+          });
         }
       })();
 
