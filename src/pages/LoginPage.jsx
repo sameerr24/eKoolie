@@ -1,356 +1,241 @@
-import { useCallback, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLegacyPage } from "../legacy/useLegacyPage";
+import { loginPorter } from "../api/porters";
+import "./LoginPage.css";
 
-const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
-  "http://localhost:5001/api";
-
-const LOGIN_HTML = `
-<div class="container">
-  <div class="logo">
-    <div class="logo-box">
-      <div class="logo-icon">🚂</div>
-      <span class="logo-text racing">eKoolie</span>
-    </div>
-  </div>
-
-  <div id="loginForm" class="form-box fade-in">
-    <h1 class="form-title">Login</h1>
-
-    <form onsubmit="return handleLogin(event);">
-      <div class="input-group">
-        <label class="label">Username:</label>
-        <input type="text" class="input" id="loginUsername" placeholder="Enter your username" required />
-        <span class="error-msg" id="loginUsernameError">Username is required</span>
-      </div>
-
-      <div class="input-group" id="loginEmailGroup">
-        <label class="label">Email:</label>
-        <input type="email" class="input" id="loginEmail" placeholder="sameer@domain.com" required />
-        <span class="error-msg" id="loginEmailError">Please enter a valid email</span>
-      </div>
-
-      <div class="input-group">
-        <label class="label">Password:</label>
-        <input type="password" class="input" id="loginPassword" placeholder="••••••••" required />
-        <span class="error-msg" id="loginPasswordError">Password is required</span>
-      </div>
-      <button id="loginBtn" type="submit" class="btn">Login</button>
-    </form>
-
-    <div class="switch-text">
-      New user?
-      <span id="registerLink" class="switch-link" onclick="showRegister()">Register here</span>
-    </div>
-    <div class="switch-text" style="margin-top: 10px">
-      Are you a Porter?
-      <span class="switch-link" onclick="togglePorterLogin()" id="porterToggleText">Login as Porter</span>
-    </div>
-  </div>
-
-  <div id="registerForm" class="form-box hidden">
-    <h1 class="form-title">Register</h1>
-
-    <form onsubmit="return handleRegister(event);">
-      <div class="input-group">
-        <label class="label">Username:</label>
-        <input type="text" class="input" id="registerUsername" placeholder="isht@example.com" required />
-        <span class="error-msg" id="registerUsernameError">Username is required</span>
-      </div>
-
-      <div class="input-group">
-        <label class="label">Email:</label>
-        <input type="email" class="input" id="registerEmail" placeholder="your@email.com" required />
-        <span class="error-msg" id="registerEmailError">Please enter a valid email</span>
-      </div>
-
-      <div class="input-group">
-        <label class="label">Password:</label>
-        <input type="password" class="input" id="registerPassword" placeholder="••••••••" required />
-        <span class="error-msg" id="registerPasswordError">Password must be at least 6 characters</span>
-      </div>
-
-      <button id="registerButton" type="submit" class="btn">Register</button>
-    </form>
-
-    <div class="switch-text">
-      Already have an account?
-      <span class="switch-link" onclick="showLogin()">Login here</span>
-    </div>
-  </div>
-</div>
-`;
+const initialLoginForm = { username: "", email: "", password: "" };
+const initialRegisterForm = { username: "", email: "", password: "" };
 
 export function LoginPage() {
-  const containerRef = useRef(null);
   const navigate = useNavigate();
 
-  const setup = useCallback(
-    ({ container }) => {
-      const body = document.body;
-      const previousBodyStyles = {
-        display: body.style.display,
-        alignItems: body.style.alignItems,
-        justifyContent: body.style.justifyContent,
-        padding: body.style.padding,
-        paddingLeft: body.style.paddingLeft,
-        backgroundImage: body.style.backgroundImage,
-        backgroundSize: body.style.backgroundSize,
-        backgroundPosition: body.style.backgroundPosition,
-        backgroundAttachment: body.style.backgroundAttachment,
-        backgroundRepeat: body.style.backgroundRepeat,
-      };
+  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [isPorterLogin, setIsPorterLogin] = useState(false);
+  const [loginForm, setLoginForm] = useState(initialLoginForm);
+  const [registerForm, setRegisterForm] = useState(initialRegisterForm);
+  const [loginErrors, setLoginErrors] = useState({});
+  const [registerErrors, setRegisterErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-      body.style.display = "flex";
-      body.style.alignItems = "center";
-      body.style.justifyContent = "flex-start";
-      body.style.padding = "20px";
-      body.style.paddingLeft = "80px";
-      body.style.backgroundImage =
-        'url("https://lp-cms-production.imgix.net/2024-08/GettyRF938095766.jpg?auto=format,compress&q=72&fit=crop")';
-      body.style.backgroundSize = "cover";
-      body.style.backgroundPosition = "center";
-      body.style.backgroundAttachment = "fixed";
-      body.style.backgroundRepeat = "no-repeat";
+  const showRegister = () => {
+    setMode("register");
+    setLoginForm(initialLoginForm);
+    setLoginErrors({});
+  };
 
-      let isPorterLogin = false;
+  const showLogin = () => {
+    setMode("login");
+    setRegisterForm(initialRegisterForm);
+    setRegisterErrors({});
+  };
 
-      const previousFns = {
-        togglePorterLogin: window.togglePorterLogin,
-        showRegister: window.showRegister,
-        showLogin: window.showLogin,
-        handleLogin: window.handleLogin,
-        handleRegister: window.handleRegister,
-      };
+  const togglePorterLogin = () => {
+    setIsPorterLogin((current) => !current);
+  };
 
-      const toggleError = (id, isVisible) => {
-        const input = container.querySelector(`#${id}`);
-        const error = container.querySelector(`#${id}Error`);
+  const handleLoginSubmit = async (event) => {
+    event.preventDefault();
 
-        input?.classList.toggle("error", isVisible);
-        error?.classList.toggle("show", isVisible);
-      };
+    const errors = {};
+    if (!loginForm.username.trim()) errors.username = true;
+    if (!isPorterLogin && (!loginForm.email.trim() || !loginForm.email.includes("@"))) {
+      errors.email = true;
+    }
+    if (!loginForm.password || loginForm.password.length < 6) errors.password = true;
 
-      window.togglePorterLogin = () => {
-        isPorterLogin = !isPorterLogin;
-        const title = container.querySelector("#loginForm .form-title");
-        const toggleText = container.querySelector("#porterToggleText");
-        const registerLink = container.querySelector(
-          "#loginForm .switch-text:first-of-type",
-        );
-        const emailGroup = container.querySelector("#loginEmailGroup");
-        const emailInput = container.querySelector("#loginEmail");
+    setLoginErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
 
-        if (!title || !toggleText || !registerLink) {
-          return;
-        }
+    if (isPorterLogin) {
+      setIsSubmitting(true);
+      try {
+        const payload = await loginPorter(loginForm.username, loginForm.password);
+        const porter = payload.data;
+        localStorage.setItem("porterId", porter.id);
+        localStorage.setItem("porterName", porter.name || loginForm.username);
+        localStorage.setItem("porterUsername", porter.username || loginForm.username);
+        navigate("/porter-dashboard");
+      } catch (error) {
+        window.alert(error.message || "Unable to reach the server. Please try again.");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
 
-        if (isPorterLogin) {
-          title.textContent = "Porter Login";
-          toggleText.textContent = "Login as User";
-          registerLink.style.display = "none";
-          if (emailGroup) {
-            emailGroup.style.display = "none";
-          }
-          if (emailInput) {
-            emailInput.removeAttribute("required");
-          }
-        } else {
-          title.textContent = "Login";
-          toggleText.textContent = "Login as Porter";
-          registerLink.style.display = "block";
-          if (emailGroup) {
-            emailGroup.style.display = "block";
-          }
-          if (emailInput) {
-            emailInput.setAttribute("required", "");
-          }
-        }
-      };
+    localStorage.setItem("username", loginForm.username);
+    navigate("/book");
+  };
 
-      window.showRegister = () => {
-        const loginForm = container.querySelector("#loginForm");
-        const registerForm = container.querySelector("#registerForm");
+  const handleRegisterSubmit = (event) => {
+    event.preventDefault();
 
-        loginForm?.classList.add("hidden");
-        registerForm?.classList.remove("hidden");
-        registerForm?.classList.add("fade-in");
+    const errors = {};
+    if (!registerForm.username.trim() || registerForm.username.trim().length < 3) errors.username = true;
+    if (!registerForm.email.trim() || !registerForm.email.includes("@")) errors.email = true;
+    if (!registerForm.password || registerForm.password.length < 6) errors.password = true;
 
-        ["#loginUsername", "#loginEmail", "#loginPassword"].forEach((sel) => {
-          const input = container.querySelector(sel);
-          if (input) {
-            input.value = "";
-          }
-        });
-      };
+    setRegisterErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      return;
+    }
 
-      window.showLogin = () => {
-        const loginForm = container.querySelector("#loginForm");
-        const registerForm = container.querySelector("#registerForm");
+    localStorage.setItem("username", registerForm.username);
+    navigate("/book");
+  };
 
-        registerForm?.classList.add("hidden");
-        loginForm?.classList.remove("hidden");
-        loginForm?.classList.add("fade-in");
+  return (
+    <div className="page login-page">
+      <div className="login-card card reveal is-visible">
+        <div className="login-header">
+          <span className="login-mark">🚆</span>
+          <h1 className="login-title">
+            {isPorterLogin ? "Porter Login" : mode === "login" ? "Login" : "Register"}
+          </h1>
+          <p className="login-subtitle">
+            {isPorterLogin
+              ? "Sign in to manage your booking requests."
+              : "Book a verified Koolie in minutes."}
+          </p>
+        </div>
 
-        ["#registerUsername", "#registerEmail", "#registerPassword"].forEach(
-          (sel) => {
-            const input = container.querySelector(sel);
-            if (input) {
-              input.value = "";
-            }
-          },
-        );
-      };
+        {mode === "login" ? (
+          <form onSubmit={handleLoginSubmit} noValidate>
+            <div className="field">
+              <label className="field-label">Username</label>
+              <input
+                className={`input${loginErrors.username ? " has-error" : ""}`}
+                placeholder="Enter your username"
+                value={loginForm.username}
+                onChange={(event) => {
+                  setLoginForm({ ...loginForm, username: event.target.value });
+                  setLoginErrors({ ...loginErrors, username: false });
+                }}
+              />
+              {loginErrors.username && <div className="field-error is-visible">Username is required</div>}
+            </div>
 
-      window.handleLogin = async (event) => {
-        event.preventDefault();
+            {!isPorterLogin && (
+              <div className="field">
+                <label className="field-label">Email</label>
+                <input
+                  type="email"
+                  className={`input${loginErrors.email ? " has-error" : ""}`}
+                  placeholder="sameer@domain.com"
+                  value={loginForm.email}
+                  onChange={(event) => {
+                    setLoginForm({ ...loginForm, email: event.target.value });
+                    setLoginErrors({ ...loginErrors, email: false });
+                  }}
+                />
+                {loginErrors.email && <div className="field-error is-visible">Please enter a valid email</div>}
+              </div>
+            )}
 
-        const username = container.querySelector("#loginUsername")?.value || "";
-        const email = container.querySelector("#loginEmail")?.value || "";
-        const password = container.querySelector("#loginPassword")?.value || "";
+            <div className="field">
+              <label className="field-label">Password</label>
+              <input
+                type="password"
+                className={`input${loginErrors.password ? " has-error" : ""}`}
+                placeholder="••••••••"
+                value={loginForm.password}
+                onChange={(event) => {
+                  setLoginForm({ ...loginForm, password: event.target.value });
+                  setLoginErrors({ ...loginErrors, password: false });
+                }}
+              />
+              {loginErrors.password && (
+                <div className="field-error is-visible">Password must be at least 6 characters</div>
+              )}
+            </div>
 
-        let isValid = true;
+            <button type="submit" className="btn btn-primary btn-block" disabled={isSubmitting}>
+              {isSubmitting ? "Signing in..." : "Login"}
+            </button>
 
-        if (!username) {
-          toggleError("loginUsername", true);
-          isValid = false;
-        } else {
-          toggleError("loginUsername", false);
-        }
+            <div className="login-switch">
+              {!isPorterLogin && (
+                <span className="switch-text">
+                  Don&apos;t have an account?{" "}
+                  <span className="switch-link" onClick={showRegister}>
+                    Register here
+                  </span>
+                </span>
+              )}
+              <span className="switch-text">
+                <span className="switch-link" onClick={togglePorterLogin}>
+                  {isPorterLogin ? "Login as User" : "Login as Porter"}
+                </span>
+              </span>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleRegisterSubmit} noValidate>
+            <div className="field">
+              <label className="field-label">Username</label>
+              <input
+                className={`input${registerErrors.username ? " has-error" : ""}`}
+                placeholder="isht@example.com"
+                value={registerForm.username}
+                onChange={(event) => {
+                  setRegisterForm({ ...registerForm, username: event.target.value });
+                  setRegisterErrors({ ...registerErrors, username: false });
+                }}
+              />
+              {registerErrors.username && (
+                <div className="field-error is-visible">Username must be at least 3 characters</div>
+              )}
+            </div>
 
-        if (!isPorterLogin) {
-          if (!email || !email.includes("@")) {
-            toggleError("loginEmail", true);
-            isValid = false;
-          } else {
-            toggleError("loginEmail", false);
-          }
-        }
+            <div className="field">
+              <label className="field-label">Email</label>
+              <input
+                type="email"
+                className={`input${registerErrors.email ? " has-error" : ""}`}
+                placeholder="your@email.com"
+                value={registerForm.email}
+                onChange={(event) => {
+                  setRegisterForm({ ...registerForm, email: event.target.value });
+                  setRegisterErrors({ ...registerErrors, email: false });
+                }}
+              />
+              {registerErrors.email && <div className="field-error is-visible">Please enter a valid email</div>}
+            </div>
 
-        if (!password || password.length < 6) {
-          toggleError("loginPassword", true);
-          isValid = false;
-        } else {
-          toggleError("loginPassword", false);
-        }
+            <div className="field">
+              <label className="field-label">Password</label>
+              <input
+                type="password"
+                className={`input${registerErrors.password ? " has-error" : ""}`}
+                placeholder="••••••••"
+                value={registerForm.password}
+                onChange={(event) => {
+                  setRegisterForm({ ...registerForm, password: event.target.value });
+                  setRegisterErrors({ ...registerErrors, password: false });
+                }}
+              />
+              {registerErrors.password && (
+                <div className="field-error is-visible">Password must be at least 6 characters</div>
+              )}
+            </div>
 
-        if (isValid) {
-          if (isPorterLogin) {
-            try {
-              const response = await fetch(`${API_BASE_URL}/porters/login`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  username,
-                  password,
-                }),
-              });
+            <button type="submit" className="btn btn-primary btn-block">
+              Register
+            </button>
 
-              if (!response.ok) {
-                const payload = await response.json().catch(() => ({}));
-                alert(payload.error || "Invalid porter credentials.");
-                return false;
-              }
-
-              const payload = await response.json();
-              const porter = payload.data;
-
-              localStorage.setItem("porterId", porter.id);
-              localStorage.setItem("porterName", porter.name || username);
-              localStorage.setItem(
-                "porterUsername",
-                porter.username || username,
-              );
-              navigate("/porter-dashboard");
-            } catch (error) {
-              alert("Unable to reach the server. Please try again.");
-              return false;
-            }
-          } else {
-            localStorage.setItem("username", username);
-            navigate("/book");
-          }
-        }
-
-        return false;
-      };
-
-      window.handleRegister = (event) => {
-        event.preventDefault();
-
-        const username =
-          container.querySelector("#registerUsername")?.value || "";
-        const email = container.querySelector("#registerEmail")?.value || "";
-        const password =
-          container.querySelector("#registerPassword")?.value || "";
-
-        let isValid = true;
-
-        if (!username || username.length < 3) {
-          toggleError("registerUsername", true);
-          isValid = false;
-        } else {
-          toggleError("registerUsername", false);
-        }
-
-        if (!email || !email.includes("@")) {
-          toggleError("registerEmail", true);
-          isValid = false;
-        } else {
-          toggleError("registerEmail", false);
-        }
-
-        if (!password || password.length < 6) {
-          toggleError("registerPassword", true);
-          isValid = false;
-        } else {
-          toggleError("registerPassword", false);
-        }
-
-        if (isValid) {
-          localStorage.setItem("username", username);
-          navigate("/book");
-        }
-
-        return false;
-      };
-
-      const inputs = [...container.querySelectorAll(".input")];
-      const onInput = (event) => {
-        event.currentTarget.classList.remove("error");
-        const errorId = `${event.currentTarget.id}Error`;
-        container.querySelector(`#${errorId}`)?.classList.remove("show");
-      };
-
-      inputs.forEach((input) => input.addEventListener("input", onInput));
-
-      return () => {
-        inputs.forEach((input) => input.removeEventListener("input", onInput));
-        body.style.display = previousBodyStyles.display;
-        body.style.alignItems = previousBodyStyles.alignItems;
-        body.style.justifyContent = previousBodyStyles.justifyContent;
-        body.style.padding = previousBodyStyles.padding;
-        body.style.paddingLeft = previousBodyStyles.paddingLeft;
-        body.style.backgroundImage = previousBodyStyles.backgroundImage;
-        body.style.backgroundSize = previousBodyStyles.backgroundSize;
-        body.style.backgroundPosition = previousBodyStyles.backgroundPosition;
-        body.style.backgroundAttachment =
-          previousBodyStyles.backgroundAttachment;
-        body.style.backgroundRepeat = previousBodyStyles.backgroundRepeat;
-        window.togglePorterLogin = previousFns.togglePorterLogin;
-        window.showRegister = previousFns.showRegister;
-        window.showLogin = previousFns.showLogin;
-        window.handleLogin = previousFns.handleLogin;
-        window.handleRegister = previousFns.handleRegister;
-      };
-    },
-    [navigate],
+            <div className="login-switch">
+              <span className="switch-text">
+                Already have an account?{" "}
+                <span className="switch-link" onClick={showLogin}>
+                  Login here
+                </span>
+              </span>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
   );
-
-  useLegacyPage({ containerRef, html: LOGIN_HTML, navigate, setup });
-
-  return <div ref={containerRef} />;
 }

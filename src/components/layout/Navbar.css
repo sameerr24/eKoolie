@@ -1,0 +1,94 @@
+.navbar {
+  width: 100%;
+  z-index: 40;
+}
+
+.navbar-transparent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: linear-gradient(to bottom, rgba(12, 21, 37, 0.55), transparent);
+}
+
+.navbar-solid {
+  position: sticky;
+  top: 0;
+  background: rgba(16, 29, 51, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+/* For pages with their own background photo: let it show through the navbar. */
+.navbar-translucent {
+  position: sticky;
+  top: 0;
+  background: rgba(16, 29, 51, 0.1);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  height: 84px;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.navbar-logo-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.navbar-logo-mark img {
+  height: 28px;
+  width: auto;
+  object-fit: contain;
+}
+
+.navbar-logo-mark {
+  font-size: 20px;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex: 1;
+}
+
+.navbar-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  transition: color 0.15s var(--ease);
+}
+
+.navbar-link:hover,
+.navbar-link.is-active {
+  color: var(--text);
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+@media (max-width: 760px) {
+  .navbar-links {
+    display: none;
+  }
+}

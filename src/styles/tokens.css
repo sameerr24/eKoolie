@@ -1,0 +1,36 @@
+:root {
+  /* Surfaces */
+  --bg: #101d33;
+  --bg-elevated: #16253f;
+  --bg-elevated-2: #1c2f4d;
+  --border: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* Text */
+  --text: #f3f6f9;
+  --text-muted: #9aa7ba;
+  --text-muted-2: #6c7889;
+
+  /* Brand accents — Indian Railways red + a cool signal blue */
+  --red: #d1293d;
+  --red-dark: #a51f30;
+  --red-soft: rgba(209, 41, 61, 0.14);
+  --blue: #3f8fe0;
+  --blue-light: #7cc4ff;
+  --blue-soft: rgba(63, 143, 224, 0.14);
+  --gold: #e8b64a;
+  --green: #34b364;
+
+  /* Type */
+  --font-serif: "Fraunces", "Georgia", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Shape */
+  --radius-pill: 999px;
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 8px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}

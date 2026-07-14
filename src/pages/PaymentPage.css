@@ -1,0 +1,81 @@
+.payment-main {
+  padding: 60px 32px 100px;
+  max-width: 560px;
+  display: flex;
+  justify-content: center;
+}
+
+.payment-card {
+  width: 100%;
+  padding: 34px;
+}
+
+.payment-summary {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.summary-row.total {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+  padding-top: 14px;
+  color: var(--text);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+
+.method-option:hover {
+  border-color: var(--blue);
+}
+
+.method-option.selected {
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  flex-shrink: 0;
+  position: relative;
+}
+
+.method-option.selected .radio {
+  border-color: var(--red);
+}
+
+.method-option.selected .radio::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--red);
+}

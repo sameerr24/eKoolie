@@ -1,380 +1,305 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLegacyPage } from "../legacy/useLegacyPage";
+import { Navbar } from "../components/layout/Navbar";
+import { useScrollReveal } from "../hooks/useScrollReveal";
+import "./HomePage.css";
 
-const HOME_HTML = `
-<aside class="sidebar" aria-label="Main sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-badge" title="eKoolie">
-      <span style="font-size: 20px">🚂</span>
-    </div>
-    <div>
-      <div class="brand-title racing-font">eKoolie</div>
-      <div style="font-size: 12px; color: #9aa3a6; margin-top: 4px">Koolie at your station</div>
-    </div>
-  </div>
+const NAV_LINKS = [
+  { href: "#home", label: "Home" },
+  { href: "#how", label: "How it works" },
+  { href: "#why", label: "Why eKoolie" },
+  { href: "#community", label: "Community" },
+];
 
-  <nav class="sidebar-nav" aria-label="Primary">
-    <a href="#home" class="nav-link active">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"></path>
-      </svg>
-      Home
-    </a>
+const HOW_IT_WORKS = [
+  {
+    title: "Search Station",
+    body: "Type your arrival station or select from recent stations to find available Koolie nearby.",
+  },
+  {
+    title: "Select Verified Koolie",
+    body: "Choose from licensed Koolie with ratings, ID verification and fare per bag — or let eKoolie auto-assign one.",
+  },
+  {
+    title: "Relax — Koolie Arrives",
+    body: "Track your Koolie in-app, confirm arrival, pay securely or cash on service, and leave a rating afterward.",
+  },
+];
 
-    <a href="#how" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5"></path>
-      </svg>
-      How it works
-    </a>
+const WHY_EKOOLIE = [
+  {
+    title: "Verified Koolie",
+    body: "All Koolie are licensed and background-checked with displayed ID numbers and verification badges.",
+  },
+  {
+    title: "Transparent Pricing",
+    body: "Clear fare breakdown by bag or weight plus optional tipping — no hidden fees.",
+  },
+  {
+    title: "Live Tracking",
+    body: "See Koolie location and ETA in real-time once they accept your job.",
+  },
+];
 
-    <a href="#why" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.51c.832-1.014 2.23-1.51 3.621-1.51 2.481 0 4.5 2.019 4.5 4.5s-2.019 4.5-4.5 4.5c-.428 0-.843-.06-1.234-.17"></path>
-        <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12 15.5v-2.5c0-.552.448-1 1-1h.5"></path>
-        <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v.01"></path>
-      </svg>
-      Why eKoolie
-    </a>
+const STORIES = [
+  {
+    tag: "STATION HELP",
+    title: "Helping with heavy bags",
+    quote: "“Quick, polite and efficient — saved us a lot of time.” — Rohit",
+    image:
+      "https://images.hindustantimes.com/rf/image_size_630x354/HT/p2/2018/06/05/Pictures/passengers-station-along-railway-platform-carrying-luggage_c7ccd1bc-68bc-11e8-8033-47bccc77d658.jpg",
+  },
+  {
+    tag: "KOOLIE RATING",
+    title: "Verified and trusted",
+    quote: "“Profile showed licence and reviews — felt safe.” — Meera",
+    image: "https://im.rediff.com/news/2018/may/27coolie5.jpg?w=450&h=450",
+  },
+  {
+    tag: "ON-TIME",
+    title: "Arrived before train",
+    quote: "“Punctual and friendly — great service.” — Ananya",
+    image:
+      "https://t3.ftcdn.net/jpg/03/55/57/92/360_F_355579231_zxxhlUgUOUAIhrvxtEMYqjkEaZaUSUDI.jpg",
+  },
+];
 
-    <a href="#community" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2a3 3 0 00-3-3h-4a3 3 0 00-3 3v2m10-10a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-      </svg>
-      Community
-    </a>
-  </nav>
-
-  <div class="sidebar-actions">
-    <a id="loginBtn" class="btn btn-outline" href="login.html">Login</a>
-    <a id="signupBtn" class="btn btn-primary" href="login.html">Sign Up</a>
-  </div>
-</aside>
-
-<main class="main" id="main">
-  <section id="home" class="hero">
-    <h1 class="hero-headline racing-font">Your Luggage, Our Responsibility.</h1>
-    <p class="hero-sub">Book licensed Koolie at Indian railway stations — affordable, verified and trackable.</p>
-    <p class="hero-desc">eKoolie connects travellers to licensed coolies (Koolie) so you can move through stations without the burden of heavy luggage. Quick booking, transparent fares, and verified Koolie for peace of mind.</p>
-
-    <div class="hero-actions">
-      <a class="btn-primary btn" href="#" onclick="promptLogin(event)">Book a Koolie</a>
-    </div>
-  </section>
-
-  <section id="how" class="section">
-    <h2>How it works</h2>
-    <p class="lead">Simple three-step booking to get a Koolie at your platform.</p>
-
-    <div class="grid-3">
-      <div class="card will-animate">
-        <div class="icon cyan" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Search Station</h3>
-        <p>Type your arrival station or select from recent stations to find available Koolie nearby.</p>
-      </div>
-
-      <div class="card will-animate">
-        <div class="icon cyan" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Select Verified Koolie</h3>
-        <p>Choose from licensed Koolie with ratings, ID verification and fare per bag — or let eKoolie auto-assign one.</p>
-      </div>
-
-      <div class="card will-animate">
-        <div class="icon yellow" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Relax — Koolie Arrives</h3>
-        <p>Track your Koolie in-app, confirm arrival, pay securely or cash on service, and leave a rating afterward.</p>
-      </div>
-    </div>
-  </section>
-
-  <section id="why" class="section">
-    <h2>Why choose eKoolie?</h2>
-    <p class="lead">Designed for travellers — safe, reliable, and affordable.</p>
-
-    <div class="grid-3">
-      <div class="card will-animate">
-        <div class="icon cyan">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Verified Koolie</h3>
-        <p>All Koolie are licensed and background-checked with displayed ID numbers and verification badges.</p>
-      </div>
-
-      <div class="card will-animate">
-        <div class="icon cyan">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Transparent Pricing</h3>
-        <p>Clear fare breakdown by bag or weight plus optional tipping — no hidden fees.</p>
-      </div>
-
-      <div class="card will-animate">
-        <div class="icon cyan">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Live Tracking</h3>
-        <p>See Koolie location and ETA in real-time once they accept your job.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>Recent Bookings / Images</h2>
-    <p class="lead">Photos from travellers and Koolie — real journeys, real help.</p>
-
-    <div class="grid-3">
-      <div class="card will-animate">
-        <div class="race-image" style="background-image: url(&quot;https://images.hindustantimes.com/rf/image_size_630x354/HT/p2/2018/06/05/Pictures/passengers-station-along-railway-platform-carrying-luggage_c7ccd1bc-68bc-11e8-8033-47bccc77d658.jpg&quot;);"></div>
-        <div style="padding-top: 14px">
-          <div style="font-size: 12px; color: var(--cyan); font-weight: 700; margin-bottom: 8px;">STATION HELP</div>
-          <h3 style="margin: 0 0 8px 0">Helping with heavy bags</h3>
-          <p style="color: var(--muted); margin: 0">“Quick, polite and efficient — saved us a lot of time.” — Rohit</p>
-        </div>
-      </div>
-
-      <div class="card will-animate">
-        <div class="race-image" style="background-image: url(&quot;https://im.rediff.com/news/2018/may/27coolie5.jpg?w=450&h=450&quot;);"></div>
-        <div style="padding-top: 14px">
-          <div style="font-size: 12px; color: #f59e0b; font-weight: 700; margin-bottom: 8px;">Koolie RATING</div>
-          <h3 style="margin: 0 0 8px 0">Verified and trusted</h3>
-          <p style="color: var(--muted); margin: 0">“Profile showed licence and reviews — felt safe.” — Meera</p>
-        </div>
-      </div>
-
-      <div class="card will-animate">
-        <div class="race-image" style="background-image: url(&quot;https://t3.ftcdn.net/jpg/03/55/57/92/360_F_355579231_zxxhlUgUOUAIhrvxtEMYqjkEaZaUSUDI.jpg&quot;);"></div>
-        <div style="padding-top: 14px">
-          <div style="font-size: 12px; color: #7dd3fc; font-weight: 700; margin-bottom: 8px;">ON-TIME</div>
-          <h3 style="margin: 0 0 8px 0">Arrived before train</h3>
-          <p style="color: var(--muted); margin: 0">“Punctual and friendly — great service.” — Ananya</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="community" class="section">
-    <h2>Community</h2>
-    <p class="lead">Share feedback, vote in quick polls, and mark favourite Koolie.</p>
-
-    <div class="grid-2">
-      <div class="card will-animate">
-        <h3 style="margin-bottom: 12px">Recent Activity</h3>
-        <div id="activity-list" style="display: flex; flex-direction: column; gap: 12px">
-          <div class="activity">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-              <div class="avatar" style="background: #ef4444">RD</div>
-              <div>
-                <div style="font-weight: 700">Rohit D.</div>
-                <div style="font-size: 12px; color: var(--muted-2)">5 minutes ago</div>
-              </div>
-            </div>
-            <div style="color: var(--muted)">"Saved me a long carry between platforms — highly recommend!"</div>
-          </div>
-
-          <div class="activity">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-              <div class="avatar" style="background: #38bdf8">SM</div>
-              <div>
-                <div style="font-weight: 700">Sana M.</div>
-                <div style="font-size: 12px; color: var(--muted-2)">1 hour ago</div>
-              </div>
-            </div>
-            <div style="color: var(--muted)">"Easy booking and transparent pricing — quick and safe."</div>
-          </div>
-        </div>
-
-        <div id="review-section" style="margin-top: 20px; text-align: center">
-          <button id="add-review-btn" class="btn btn-outline" onclick="showReviewForm()">Add a review</button>
-
-          <div id="review-form" style="display: none; flex-direction: column; gap: 10px; margin-top: 10px;">
-            <textarea id="review-input" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; background: #222; border: 1px solid #333; color: white; resize: vertical;" placeholder="Write your review here..."></textarea>
-            <div style="display: flex; gap: 10px; justify-content: center">
-              <button class="btn btn-primary" onclick="submitReview()">Post</button>
-              <button class="btn btn-outline" onclick="cancelReview()">Cancel</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card will-animate">
-        <h3 style="margin-bottom: 12px">Contact & Support</h3>
-        <p style="color: var(--muted); margin-bottom: 14px">Have questions or want to register as a Koolie? Reach us at:</p>
-        <p style="font-weight: 700; color: var(--white); margin: 0 0 8px">support@ekoolie.in</p>
-        <p style="color: var(--muted); margin: 0">Or call: +91 98765 43210</p>
-      </div>
-    </div>
-  </section>
-</main>
-`;
+const INITIAL_ACTIVITY = [
+  {
+    id: "seed-1",
+    initials: "RD",
+    color: "#d1293d",
+    name: "Rohit D.",
+    time: "5 minutes ago",
+    text: "Saved me a long carry between platforms — highly recommend!",
+  },
+  {
+    id: "seed-2",
+    initials: "SM",
+    color: "#3f8fe0",
+    name: "Sana M.",
+    time: "1 hour ago",
+    text: "Easy booking and transparent pricing — quick and safe.",
+  },
+];
 
 export function HomePage() {
-  const containerRef = useRef(null);
   const navigate = useNavigate();
+  const revealRef = useScrollReveal();
 
-  const setup = useCallback(
-    ({ container }) => {
-      const body = document.body;
-      const previousBodyStyles = {
-        display: body.style.display,
-        alignItems: body.style.alignItems,
-        justifyContent: body.style.justifyContent,
-        padding: body.style.padding,
-        paddingLeft: body.style.paddingLeft,
-      };
+  const [activeHref, setActiveHref] = useState("#home");
+  const [activity, setActivity] = useState(INITIAL_ACTIVITY);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewText, setReviewText] = useState("");
 
-      body.style.display = "block";
-      body.style.alignItems = "stretch";
-      body.style.justifyContent = "normal";
-      body.style.padding = "0";
-      body.style.paddingLeft = "0";
+  const handleNavClick = useCallback((event, link) => {
+    event.preventDefault();
+    const target = document.querySelector(link.href);
+    if (target) {
+      window.scrollTo({ top: target.offsetTop - 20, behavior: "smooth" });
+      setActiveHref(link.href);
+    }
+  }, []);
 
-      const previousFns = {
-        showReviewForm: window.showReviewForm,
-        cancelReview: window.cancelReview,
-        submitReview: window.submitReview,
-        deleteReview: window.deleteReview,
-        promptLogin: window.promptLogin,
-      };
-
-      window.showReviewForm = () => {
-        const addBtn = container.querySelector("#add-review-btn");
-        const reviewForm = container.querySelector("#review-form");
-        const reviewInput = container.querySelector("#review-input");
-
-        if (addBtn && reviewForm) {
-          addBtn.style.display = "none";
-          reviewForm.style.display = "flex";
-          reviewInput?.focus();
-        }
-      };
-
-      window.cancelReview = () => {
-        const addBtn = container.querySelector("#add-review-btn");
-        const reviewForm = container.querySelector("#review-form");
-        const reviewInput = container.querySelector("#review-input");
-
-        if (reviewInput) {
-          reviewInput.value = "";
-        }
-        if (reviewForm && addBtn) {
-          reviewForm.style.display = "none";
-          addBtn.style.display = "inline-block";
-        }
-      };
-
-      window.submitReview = () => {
-        const reviewInput = container.querySelector("#review-input");
-        const activityList = container.querySelector("#activity-list");
-        const reviewText = reviewInput?.value || "";
-
-        if (!reviewText.trim() || !activityList) {
-          alert("Please enter a review before posting.");
-          return;
-        }
-
-        const newActivity = document.createElement("div");
-        newActivity.className = "activity";
-        newActivity.innerHTML = `
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
-            <div class="avatar" style="background: #10b981">YOU</div>
-            <div>
-              <div style="font-weight: 700">You</div>
-              <div style="font-size: 12px; color: var(--muted-2)">Just now</div>
-            </div>
-          </div>
-          <div style="color: var(--muted); margin-bottom: 10px;">"${reviewText}"</div>
-          <div>
-            <button class="btn btn-outline" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);" onclick="deleteReview(this)">Delete</button>
-          </div>
-        `;
-
-        activityList.appendChild(newActivity);
-        window.cancelReview();
-      };
-
-      window.deleteReview = (btnElement) => {
-        if (confirm("Are you sure you want to delete this review?")) {
-          btnElement.closest(".activity")?.remove();
-        }
-      };
-
-      window.promptLogin = (event) => {
-        event.preventDefault();
-        if (
-          confirm(
-            "Please Login or Sign Up to book a porter.\n\nClick OK to proceed to the Login page.",
-          )
-        ) {
-          navigate("/login");
-        }
-      };
-
-      const navLinks = [...container.querySelectorAll(".nav-link")];
-      const onNavClick = (evt) => {
-        const href = evt.currentTarget.getAttribute("href");
-        if (!href?.startsWith("#")) {
-          return;
-        }
-
-        evt.preventDefault();
-        const target = container.querySelector(href);
-        if (target) {
-          window.scrollTo({ top: target.offsetTop - 20, behavior: "smooth" });
-          navLinks.forEach((link) => link.classList.remove("active"));
-          evt.currentTarget.classList.add("active");
-        }
-      };
-
-      navLinks.forEach((link) => link.addEventListener("click", onNavClick));
-
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.style.opacity = "1";
-              entry.target.style.transform = "translateY(0)";
-              entry.target.style.animation = "fadeInUp .6s ease forwards";
-              observer.unobserve(entry.target);
-            }
-          });
-        },
-        { threshold: 0.12, rootMargin: "0px 0px -50px 0px" },
-      );
-
-      container.querySelectorAll(".will-animate").forEach((el) => {
-        el.style.opacity = "0";
-        el.style.transform = "translateY(18px)";
-        observer.observe(el);
-      });
-
-      return () => {
-        navLinks.forEach((link) =>
-          link.removeEventListener("click", onNavClick),
-        );
-        observer.disconnect();
-        body.style.display = previousBodyStyles.display;
-        body.style.alignItems = previousBodyStyles.alignItems;
-        body.style.justifyContent = previousBodyStyles.justifyContent;
-        body.style.padding = previousBodyStyles.padding;
-        body.style.paddingLeft = previousBodyStyles.paddingLeft;
-        window.showReviewForm = previousFns.showReviewForm;
-        window.cancelReview = previousFns.cancelReview;
-        window.submitReview = previousFns.submitReview;
-        window.deleteReview = previousFns.deleteReview;
-        window.promptLogin = previousFns.promptLogin;
-      };
+  const handleBookClick = useCallback(
+    (event) => {
+      event.preventDefault();
+      if (
+        window.confirm(
+          "Please Login or Sign Up to book a porter.\n\nClick OK to proceed to the Login page.",
+        )
+      ) {
+        navigate("/login");
+      }
     },
     [navigate],
   );
 
-  useLegacyPage({ containerRef, html: HOME_HTML, navigate, setup });
+  const handlePostReview = () => {
+    if (!reviewText.trim()) {
+      window.alert("Please enter a review before posting.");
+      return;
+    }
 
-  return <div ref={containerRef} className="home-page" />;
+    setActivity((current) => [
+      ...current,
+      {
+        id: `you-${Date.now()}`,
+        initials: "YOU",
+        color: "#34b364",
+        name: "You",
+        time: "Just now",
+        text: reviewText,
+      },
+    ]);
+    setReviewText("");
+    setShowReviewForm(false);
+  };
+
+  const handleDeleteReview = (id) => {
+    if (window.confirm("Are you sure you want to delete this review?")) {
+      setActivity((current) => current.filter((item) => item.id !== id));
+    }
+  };
+
+  return (
+    <div className="page home-page" ref={revealRef}>
+      <section id="home" className="hero">
+        <Navbar
+          variant="transparent"
+          links={NAV_LINKS}
+          activeHref={activeHref}
+          onLinkClick={handleNavClick}
+          actions={
+            <>
+              <a href="/login" className="btn btn-outline btn-on-hero">
+                Login
+              </a>
+              <a href="/login" className="btn btn-primary">
+                Sign Up
+              </a>
+            </>
+          }
+        />
+
+        <div className="hero-inner container">
+          <div className="eyebrow">Railway Porter Booking</div>
+          <h1 className="hero-headline">
+            Your journey,
+            <br />
+            <em>carried with care.</em>
+          </h1>
+          <p className="hero-sub">
+            eKoolie connects travellers to licensed coolies (Koolie) so you can move through
+            stations without the burden of heavy luggage. Quick booking, transparent fares, and
+            verified Koolie for peace of mind.
+          </p>
+          <a href="#" className="btn btn-primary btn-lg" onClick={handleBookClick}>
+            Book a Koolie
+          </a>
+        </div>
+      </section>
+
+      <main className="page-main">
+        <section id="how" className="section container">
+          <div className="eyebrow">How it works</div>
+          <h2 className="section-heading">Simple three-step booking to get a Koolie at your platform.</h2>
+
+          <div className="grid-3" style={{ marginTop: 40 }}>
+            {HOW_IT_WORKS.map((item, index) => (
+              <div className="card reveal" key={item.title}>
+                <div className="step-index">{String(index + 1).padStart(2, "0")}</div>
+                <h3 style={{ marginTop: 18, marginBottom: 10, fontSize: 20 }}>{item.title}</h3>
+                <p style={{ color: "var(--text-muted)" }}>{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="why" className="section container">
+          <div className="eyebrow">Why choose eKoolie?</div>
+          <h2 className="section-heading">Designed for travellers — safe, reliable, and affordable.</h2>
+
+          <div className="grid-3" style={{ marginTop: 40 }}>
+            {WHY_EKOOLIE.map((item) => (
+              <div className="card reveal" key={item.title}>
+                <h3 style={{ marginBottom: 10, fontSize: 20 }}>{item.title}</h3>
+                <p style={{ color: "var(--text-muted)" }}>{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="section container">
+          <div className="eyebrow">Real journeys</div>
+          <h2 className="section-heading">Photos from travellers and Koolie — real journeys, real help.</h2>
+
+          <div className="grid-3" style={{ marginTop: 40 }}>
+            {STORIES.map((story) => (
+              <div className="story-card reveal" key={story.title}>
+                <div className="story-image" style={{ backgroundImage: `url("${story.image}")` }} />
+                <div className="story-tag">{story.tag}</div>
+                <h3 style={{ margin: "8px 0" }}>{story.title}</h3>
+                <p style={{ color: "var(--text-muted)" }}>{story.quote}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="community" className="section container">
+          <div className="eyebrow">Community</div>
+          <h2 className="section-heading">Share feedback, vote in quick polls, and mark favourite Koolie.</h2>
+
+          <div className="grid-2" style={{ marginTop: 40, alignItems: "start" }}>
+            <div className="card reveal">
+              <h3 style={{ marginBottom: 16, fontSize: 18 }}>Recent Activity</h3>
+              <div className="activity-list">
+                {activity.map((item) => (
+                  <div className="activity" key={item.id}>
+                    <div className="activity-head">
+                      <div className="avatar" style={{ background: item.color }}>
+                        {item.initials}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{item.name}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted-2)" }}>{item.time}</div>
+                      </div>
+                    </div>
+                    <div style={{ color: "var(--text-muted)" }}>&quot;{item.text}&quot;</div>
+                    {item.id.startsWith("you-") && (
+                      <button className="btn btn-outline btn-sm btn-danger" onClick={() => handleDeleteReview(item.id)}>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="review-section">
+                {!showReviewForm ? (
+                  <button className="btn btn-outline" onClick={() => setShowReviewForm(true)}>
+                    Add a review
+                  </button>
+                ) : (
+                  <div className="review-form">
+                    <textarea
+                      className="review-input"
+                      rows={3}
+                      placeholder="Write your review here..."
+                      value={reviewText}
+                      onChange={(event) => setReviewText(event.target.value)}
+                      autoFocus
+                    />
+                    <div className="review-actions">
+                      <button className="btn btn-primary" onClick={handlePostReview}>
+                        Post
+                      </button>
+                      <button
+                        className="btn btn-outline"
+                        onClick={() => {
+                          setReviewText("");
+                          setShowReviewForm(false);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="card reveal">
+              <h3 style={{ marginBottom: 16, fontSize: 18 }}>Contact &amp; Support</h3>
+              <p style={{ color: "var(--text-muted)", marginBottom: 14 }}>
+                Have questions or want to register as a Koolie? Reach us at:
+              </p>
+              <p style={{ fontWeight: 700, marginBottom: 8 }}>support@ekoolie.in</p>
+              <p style={{ color: "var(--text-muted)" }}>Or call: +91 98765 43210</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }

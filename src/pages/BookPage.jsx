@@ -1,939 +1,503 @@
-import { useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { useLegacyPage } from "../legacy/useLegacyPage";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Navbar } from "../components/layout/Navbar";
+import { getStations } from "../api/stations";
+import { findNearestPorters, requestBooking, getBooking } from "../api/bookings";
+import "./BookPage.css";
 
-const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) ||
-  "http://localhost:5001/api";
-
-const STATION_COORDINATES = {};
 const FALLBACK_STATIONS = [
-  {
-    name: "New Delhi Station",
-    city: "New Delhi",
-    coordinates: [77.209, 28.6139],
-  },
+  { name: "New Delhi Station", city: "New Delhi", coordinates: [77.209, 28.6139] },
   { name: "Mumbai Central", city: "Mumbai", coordinates: [72.8356, 18.9402] },
   { name: "Howrah Junction", city: "Kolkata", coordinates: [88.2636, 22.5958] },
-  {
-    name: "Bengaluru City",
-    city: "Bengaluru",
-    coordinates: [77.5946, 12.9716],
-  },
+  { name: "Bengaluru City", city: "Bengaluru", coordinates: [77.5946, 12.9716] },
   { name: "Chennai Central", city: "Chennai", coordinates: [80.2707, 13.0827] },
-  {
-    name: "Hyderabad Deccan",
-    city: "Hyderabad",
-    coordinates: [78.4867, 17.385],
-  },
+  { name: "Hyderabad Deccan", city: "Hyderabad", coordinates: [78.4867, 17.385] },
   { name: "Pune Junction", city: "Pune", coordinates: [73.8567, 18.5204] },
-  {
-    name: "Ahmedabad Junction",
-    city: "Ahmedabad",
-    coordinates: [72.5714, 23.0225],
-  },
-  {
-    name: "Lucknow Charbagh",
-    city: "Lucknow",
-    coordinates: [80.9462, 26.8467],
-  },
+  { name: "Ahmedabad Junction", city: "Ahmedabad", coordinates: [72.5714, 23.0225] },
+  { name: "Lucknow Charbagh", city: "Lucknow", coordinates: [80.9462, 26.8467] },
   { name: "Patiala Station", city: "Patiala", coordinates: [76.3869, 30.3398] },
 ];
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
-}
-
-function getStationCoordinates(stationName) {
-  if (!stationName) {
-    return null;
-  }
-
-  const normalized = stationName.trim().toLowerCase();
-
-  for (const [name, coordinates] of Object.entries(STATION_COORDINATES)) {
-    if (normalized === name.toLowerCase()) {
-      return coordinates;
-    }
-  }
-
-  return null;
-}
-
 function getDistanceKm(origin, target) {
-  if (!origin || !target) {
-    return null;
-  }
-
+  if (!origin || !target) return null;
   const [originLng, originLat] = origin;
   const [targetLng, targetLat] = target;
   const toRadians = (value) => (value * Math.PI) / 180;
   const earthRadiusKm = 6371;
-
   const deltaLat = toRadians(targetLat - originLat);
   const deltaLng = toRadians(targetLng - originLng);
   const a =
-    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-    Math.cos(toRadians(originLat)) *
-      Math.cos(toRadians(targetLat)) *
-      Math.sin(deltaLng / 2) *
-      Math.sin(deltaLng / 2);
-
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(toRadians(originLat)) * Math.cos(toRadians(targetLat)) * Math.sin(deltaLng / 2) ** 2;
   return 2 * earthRadiusKm * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function getBrowserLocation() {
-  if (!navigator.geolocation) {
-    return Promise.resolve(null);
-  }
-
+  if (!navigator.geolocation) return Promise.resolve(null);
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve([position.coords.longitude, position.coords.latitude]);
-      },
+      (position) => resolve([position.coords.longitude, position.coords.latitude]),
       () => resolve(null),
       { enableHighAccuracy: true, timeout: 7000, maximumAge: 0 },
     );
   });
 }
 
-function buildPorterCard(porter, index, originCoordinates) {
-  const distanceKm = getDistanceKm(
-    originCoordinates,
-    porter.location?.coordinates,
-  );
-  const distanceText =
-    typeof distanceKm === "number"
-      ? `${distanceKm.toFixed(1)} km away`
-      : "Distance unavailable";
-  const skills = Array.isArray(porter.skills) ? porter.skills.join(", ") : "";
-
-  return `
-    <div class="result-card" style="padding: 16px; border: 1px solid rgba(255,255,255,0.08);">
-      <div class="porter-preview" style="margin-bottom: 12px;">
-        <div class="porter-avatar"></div>
-        <div style="min-width: 0;">
-          <div style="font-weight: 700; font-size: 18px">${escapeHtml(porter.name)}</div>
-          <div style="color: var(--muted); font-size: 14px; line-height: 1.4">
-            ${escapeHtml(porter.station)} • ⭐ ${escapeHtml(porter.rating)} • ${escapeHtml(distanceText)}
-          </div>
-        </div>
-      </div>
-
-      <div style="color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 12px;">
-        Capacity: ${escapeHtml(porter.maxLoad)} kg<br />
-        Skills: ${escapeHtml(skills || "No skills listed")}
-      </div>
-
-      <div class="grid-2">
-        <a href="porter_profile.html" class="btn btn-outline" style="text-align: center">View Details</a>
-        <a href="#" class="btn btn-primary" style="text-align: center" onclick="requestPorter(${index}); return false;">Send Request</a>
-      </div>
-    </div>
-  `;
+function readJSON(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "null");
+  } catch {
+    return null;
+  }
 }
 
-function buildAssignedPorterCard(assignment, booking, stationLabel) {
-  const porterName = assignment?.porterName || "Assigned porter";
-  const porterRating =
-    assignment?.porterRating ?? booking?.assignedPorter?.rating;
-  const porterPhone =
-    assignment?.porterPhone || booking?.assignedPorter?.phone || "N/A";
-  const porterDistance = assignment?.distance || "N/A";
-
-  return `
-    <div class="result-card" style="padding: 16px; border: 1px solid rgba(255,255,255,0.08);">
-      <h3 style="margin: 0 0 8px 0; color: var(--cyan)">Booking Confirmed</h3>
-      <p style="margin: 0; color: var(--muted)">
-        ${escapeHtml(stationLabel || booking?.station || "your station")} is covered by a live Atlas assignment.
-      </p>
-
-      <div class="porter-preview" style="margin: 16px 0 12px;">
-        <div class="porter-avatar"></div>
-        <div>
-          <div style="font-weight: 700; font-size: 18px">${escapeHtml(porterName)}</div>
-          <div style="color: var(--muted); font-size: 14px">⭐ ${escapeHtml(porterRating ?? "N/A")} • ${escapeHtml(porterDistance)}</div>
-        </div>
-      </div>
-
-      <div style="color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 14px;">
-        Booking ID: ${escapeHtml(booking?._id || "N/A")}<br />
-        Status: ${escapeHtml(booking?.status || "assigned")}<br />
-        Contact: ${escapeHtml(porterPhone)}
-      </div>
-
-      <div class="grid-2">
-        <a href="porter_profile.html" class="btn btn-outline" style="text-align: center">View Details</a>
-        <a href="payment.html" class="btn btn-primary" style="text-align: center">Proceed to Pay</a>
-      </div>
-    </div>
-  `;
-}
-
-const BOOK_HTML = `
-<aside class="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-badge">
-      <span style="font-size: 20px">🚂</span>
-    </div>
-    <div>
-      <div class="brand-title racing-font">eKoolie</div>
-      <div style="font-size: 12px; color: #9aa3a6; margin-top: 4px">Koolie at your station</div>
-    </div>
-  </div>
-
-  <nav class="sidebar-nav">
-    <a href="home.html" class="nav-link">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"></path></svg>
-      Home
-    </a>
-    <a href="book.html" class="nav-link active">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-      Book Porter
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <a href="#" onclick="logout()" class="nav-link" style="color: #ef4444">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-        <polyline points="16 17 21 12 16 7"></polyline>
-        <line x1="21" y1="12" x2="9" y2="12"></line>
-      </svg>
-      Logout
-    </a>
-  </div>
-</aside>
-
-<main class="main book-page">
-  <div id="userGreeting" class="user-greeting"></div>
-  <div class="card">
-    <h1 style="margin-top: 0; margin-bottom: 24px">Book a Porter</h1>
-
-    <form id="bookingForm" onsubmit="handleSearch(event)">
-      <div class="form-group">
-        <label class="form-label">Train Number</label>
-        <input id="train_number" type="text" class="form-input" placeholder="e.g. 12951" required />
-      </div>
-
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Coach</label>
-          <input id="coach" type="text" class="form-input" placeholder="e.g. B2" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Seat Number</label>
-          <input id="seat_number" type="text" class="form-input" placeholder="e.g. 45" required />
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Arrival Station</label>
-        <select id="station" class="form-input" required>
-          <option value="">Select a station</option>
-        </select>
-        <div style="margin-top: 8px; font-size: 12px; color: #9aa3a6; line-height: 1.5">
-          Choose a seeded station from the dropdown. This prevents outside station names.
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Contact Phone</label>
-          <input id="phone" type="tel" class="form-input" placeholder="e.g. 9876543210" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Approx. Luggage Weight (kg)</label>
-          <input id="weight" type="number" min="0" step="1" class="form-input" placeholder="e.g. 25" value="25" required />
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="form-group">
-          <label class="form-label">Platform Number</label>
-          <input id="platform" type="text" class="form-input" placeholder="e.g. 12" required />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Arrival Time</label>
-          <input id="time" type="time" class="form-input" required />
-        </div>
-      </div>
-
-      <button id="submit" type="submit" class="btn btn-primary" style="width: 100%">Search Nearby Porters</button>
-    </form>
-
-    <div id="resultSection" class="hidden">
-      <div class="result-card">
-        <h3 id="resultTitle" style="margin: 0 0 8px 0; color: var(--cyan)">Nearest Porters</h3>
-        <p id="resultSubtitle" style="margin: 0; color: var(--muted)">Checking live Atlas availability.</p>
-        <div id="searchStatus" style="margin-top: 12px; color: var(--muted); font-size: 14px;"></div>
-        <div id="assignedBookingCard" style="margin-top: 16px;"></div>
-        <div id="nearbyPortersList" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;"></div>
-      </div>
-    </div>
-  </div>
-</main>
-`;
+const NAV_LINKS = [{ href: "/book", label: "Book Porter" }];
 
 export function BookPage() {
-  const containerRef = useRef(null);
   const navigate = useNavigate();
 
-  const setup = useCallback(
-    ({ container }) => {
-      const previousFns = {
-        handleSearch: window.handleSearch,
-        logout: window.logout,
-        selectPorter: window.selectPorter,
-        requestPorter: window.requestPorter,
-      };
+  const [form, setForm] = useState({
+    train_number: "",
+    coach: "",
+    seat_number: "",
+    station: "",
+    phone: "",
+    weight: "25",
+    platform: "",
+    time: "",
+  });
+  const [stationOptions, setStationOptions] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [resultHeading, setResultHeading] = useState({
+    title: "Nearest Porters",
+    subtitle: "Checking live Atlas availability.",
+  });
+  const [searchStatus, setSearchStatus] = useState({ text: "", isError: false });
+  const [porters, setPorters] = useState([]);
+  const [statusCard, setStatusCard] = useState(null); // { title, subtitle, status, body, action }
 
-      let bookingDraft = null;
-      let bookingPollTimer = null;
-      let activeBookingId = null;
-      let paymentRedirectedBookingId = null;
+  const stationCoordsRef = useRef({});
+  const bookingDraftRef = useRef(null);
+  const activeBookingIdRef = useRef(null);
+  const paymentRedirectedRef = useRef(null);
+  const pollTimerRef = useRef(null);
+  const resultRef = useRef(null);
 
-      const getScrollContainer = () => {
-        const candidates = [
-          document.scrollingElement,
-          document.documentElement,
-          document.body,
-          container.querySelector(".main"),
-          container,
-        ].filter(Boolean);
+  const username = localStorage.getItem("username");
 
-        return (
-          candidates.find((el) => el.scrollHeight > el.clientHeight) ||
-          document.scrollingElement ||
-          document.documentElement
-        );
-      };
+  const getStationCoordinates = (name) => {
+    if (!name) return null;
+    const normalized = name.trim().toLowerCase();
+    for (const [key, coords] of Object.entries(stationCoordsRef.current)) {
+      if (key.toLowerCase() === normalized) return coords;
+    }
+    return null;
+  };
 
-      const scrollToTarget = (target) => {
-        if (!target) {
-          return;
-        }
+  const saveCurrentBooking = (booking) => {
+    if (!booking) return;
+    localStorage.setItem("latestBookingRequest", JSON.stringify(booking));
+    localStorage.setItem("selectedBooking", JSON.stringify(booking));
+    activeBookingIdRef.current = booking._id || activeBookingIdRef.current;
+  };
 
-        const scrollContainer = getScrollContainer();
-        if (!scrollContainer) {
-          return;
-        }
+  const pollBookingStatus = useCallback(async () => {
+    const bookingId = activeBookingIdRef.current || readJSON("latestBookingRequest")?._id;
+    if (!bookingId) return;
 
-        const containerRect = scrollContainer.getBoundingClientRect
-          ? scrollContainer.getBoundingClientRect()
-          : { top: 0 };
-        const targetRect = target.getBoundingClientRect();
-        const targetTop =
-          targetRect.top - containerRect.top + scrollContainer.scrollTop;
+    try {
+      const payload = await getBooking(bookingId);
+      const booking = payload.data;
+      if (!booking) return;
 
-        scrollContainer.scrollTo({
-          top: Math.max(0, targetTop - 12),
-          behavior: "smooth",
-        });
-      };
+      saveCurrentBooking(booking);
 
-      const setButtonState = (button, text, isLoading) => {
-        if (!button) {
-          return;
-        }
-
-        button.innerText = text;
-        button.disabled = isLoading;
-        button.style.opacity = isLoading ? "0.7" : "1";
-      };
-
-      const getCurrentBooking = () => {
-        try {
-          return JSON.parse(
-            localStorage.getItem("latestBookingRequest") || "null",
-          );
-        } catch (error) {
-          return null;
-        }
-      };
-
-      const saveCurrentBooking = (booking) => {
-        if (!booking) {
-          return;
-        }
-
-        localStorage.setItem("latestBookingRequest", JSON.stringify(booking));
-        localStorage.setItem("selectedBooking", JSON.stringify(booking));
-        activeBookingId = booking._id || activeBookingId;
-      };
-
-      const setInlineBookingStatus = ({
-        title,
-        subtitle,
-        status,
-        body,
-        actionHtml,
-      }) => {
-        const resultTitle = container.querySelector("#resultTitle");
-        const resultSubtitle = container.querySelector("#resultSubtitle");
-        const searchStatus = container.querySelector("#searchStatus");
-        const assignedBookingCard = container.querySelector(
-          "#assignedBookingCard",
-        );
-
-        if (resultTitle && title) {
-          resultTitle.textContent = title;
-        }
-
-        if (resultSubtitle && subtitle) {
-          resultSubtitle.textContent = subtitle;
-        }
-
-        if (searchStatus) {
-          searchStatus.textContent = status || "";
-        }
-
-        if (assignedBookingCard) {
-          assignedBookingCard.innerHTML = `
-            <div style="padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); line-height: 1.6; color: var(--muted);">
-              <div style="font-weight: 700; color: var(--white); margin-bottom: 6px;">${escapeHtml(title || "Booking update")}</div>
-              <div>${escapeHtml(body || "")}</div>
-              ${actionHtml || ""}
-            </div>
-          `;
-        }
-      };
-
-      const showWaitingPopup = (booking) => {
-        if (!booking) {
-          return;
-        }
-
-        setInlineBookingStatus({
+      if (booking.status === "requested") {
+        setStatusCard({
           title: "Waiting for porter to accept",
-          subtitle:
-            "Your request is live. We will keep checking for the porter response.",
+          subtitle: "Your request is live. We will keep checking for the porter response.",
           status: `Booking ID: ${booking._id}`,
           body: "This is a live request. Keep this page open or switch back to it and press Check Status if needed.",
-          actionHtml: `
-            <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
-              <button type="button" class="btn btn-primary" onclick="window.__checkBookingStatus && window.__checkBookingStatus()">Check Status</button>
-              <button type="button" class="btn btn-outline" onclick="window.__clearBookingStatus && window.__clearBookingStatus()">Hide</button>
-            </div>
-          `,
+          action: "waiting",
         });
-      };
+        return;
+      }
 
-      const showPaymentPopup = (booking) => {
-        if (!booking) {
-          return;
-        }
-
-        const assignedPorter = booking.assignedPorter;
-        const porterName = assignedPorter?.name || "your porter";
-
-        setInlineBookingStatus({
+      if (booking.status === "assigned" && booking.paymentStatus !== "paid") {
+        const porterName = booking.assignedPorter?.name || "your porter";
+        setStatusCard({
           title: "Porter accepted your request",
-          subtitle:
-            "Payment is now required before the porter can complete the booking.",
+          subtitle: "Payment is now required before the porter can complete the booking.",
           status: `${porterName} has accepted booking ID: ${booking._id}`,
           body: "Proceed to payment now. Once payment is recorded, the porter can finish the job from their dashboard.",
-          actionHtml: `
-            <div style="margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap;">
-              <button type="button" class="btn btn-primary" onclick="window.__goToPayment && window.__goToPayment()">Proceed to Payment</button>
-            </div>
-          `,
+          action: "payment",
         });
-      };
 
-      const showPaymentCompletePopup = (booking) => {
-        if (!booking) {
-          return;
+        if (paymentRedirectedRef.current !== booking._id) {
+          paymentRedirectedRef.current = booking._id;
+          localStorage.setItem("selectedBooking", JSON.stringify(booking));
+          navigate("/payment");
         }
+        return;
+      }
 
-        const assignedPorter = booking.assignedPorter;
-        const porterName = assignedPorter?.name || "your porter";
-
-        setInlineBookingStatus({
+      if (booking.paymentStatus === "paid") {
+        const porterName = booking.assignedPorter?.name || "your porter";
+        setStatusCard({
           title: "Payment successful",
-          subtitle:
-            "The porter has been notified and can complete the booking now.",
+          subtitle: "The porter has been notified and can complete the booking now.",
           status: `${porterName} is finishing the job.`,
           body: `Payment recorded for booking ID: ${booking._id}. The porter may now mark the booking complete after service.`,
-          actionHtml: "",
+          action: null,
         });
-      };
-
-      const pollBookingStatus = async () => {
-        const bookingId = activeBookingId || getCurrentBooking()?._id;
-        if (!bookingId) {
-          return;
-        }
-
-        try {
-          const response = await fetch(`${API_BASE_URL}/bookings/${bookingId}`);
-          if (!response.ok) {
-            return;
-          }
-
-          const payload = await response.json();
-          const booking = payload.data;
-          if (!booking) {
-            return;
-          }
-
-          saveCurrentBooking(booking);
-
-          if (booking.status === "requested") {
-            showWaitingPopup(booking);
-            return;
-          }
-
-          if (
-            booking.status === "assigned" &&
-            booking.paymentStatus !== "paid"
-          ) {
-            showPaymentPopup(booking);
-            if (paymentRedirectedBookingId !== booking._id) {
-              paymentRedirectedBookingId = booking._id;
-              localStorage.setItem("selectedBooking", JSON.stringify(booking));
-              navigate("/payment");
-            }
-            return;
-          }
-
-          if (booking.paymentStatus === "paid") {
-            showPaymentCompletePopup(booking);
-            return;
-          }
-
-          paymentRedirectedBookingId = null;
-        } catch (error) {
-          console.warn("Booking status poll failed:", error);
-        }
-      };
-
-      const startPollingBooking = (booking) => {
-        if (!booking) {
-          return;
-        }
-
-        activeBookingId = booking._id;
-        if (bookingPollTimer) {
-          window.clearInterval(bookingPollTimer);
-        }
-
-        bookingPollTimer = window.setInterval(pollBookingStatus, 4000);
-        void pollBookingStatus();
-      };
-
-      const onWindowFocus = () => {
-        void pollBookingStatus();
-      };
-
-      const onVisibilityChange = () => {
-        if (!document.hidden) {
-          void pollBookingStatus();
-        }
-      };
-
-      const showResultSection = () => {
-        const resultSection = container.querySelector("#resultSection");
-        resultSection?.classList.remove("hidden");
-        // Align the top of the results with the top of the scroll container.
-        scrollToTarget(resultSection);
-      };
-
-      const showSearchStatus = (message, isError = false) => {
-        const searchStatus = container.querySelector("#searchStatus");
-        if (!searchStatus) {
-          return;
-        }
-
-        searchStatus.textContent = message;
-        searchStatus.style.color = isError ? "#fca5a5" : "var(--muted)";
-      };
-
-      const renderPorters = (porters, originCoordinates, stationLabel) => {
-        const resultTitle = container.querySelector("#resultTitle");
-        const resultSubtitle = container.querySelector("#resultSubtitle");
-        const listElement = container.querySelector("#nearbyPortersList");
-
-        if (resultTitle) {
-          resultTitle.textContent = `Nearest Porters${stationLabel ? ` for ${stationLabel}` : ""}`;
-        }
-
-        if (resultSubtitle) {
-          resultSubtitle.textContent =
-            porters.length > 0
-              ? "Choose a porter from the live Atlas results below."
-              : "No porters matched the current search. Try a different station or use your location.";
-        }
-
-        if (!listElement) {
-          return;
-        }
-
-        listElement.innerHTML =
-          porters.length > 0
-            ? porters
-                .map((porter, index) =>
-                  buildPorterCard(porter, index, originCoordinates),
-                )
-                .join("")
-            : `
-              <div style="padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03); color: var(--muted); line-height: 1.5;">
-                No live match found in Atlas for this search. If you typed a non-demo station, try one of the seeded stations or allow location access.
-              </div>
-            `;
-      };
-
-      const renderAssignedBooking = (assignment, booking, stationLabel) => {
-        const resultTitle = container.querySelector("#resultTitle");
-        const resultSubtitle = container.querySelector("#resultSubtitle");
-        const assignedCardElement = container.querySelector(
-          "#assignedBookingCard",
-        );
-
-        if (resultTitle) {
-          resultTitle.textContent = "Booking Confirmed";
-        }
-
-        if (resultSubtitle) {
-          resultSubtitle.textContent =
-            "Your booking has been created and the best available porter has been assigned.";
-        }
-
-        if (assignedCardElement) {
-          assignedCardElement.innerHTML = buildAssignedPorterCard(
-            assignment,
-            booking,
-            stationLabel,
-          );
-        }
-      };
-
-      window.selectPorter = (porterIndex) => {
-        const porterState = window.__selectedPorters?.[porterIndex];
-        if (!porterState) {
-          return;
-        }
-
-        localStorage.setItem("selectedPorter", JSON.stringify(porterState));
-      };
-
-      window.requestPorter = async (porterIndex) => {
-        const porterState = window.__selectedPorters?.[porterIndex];
-        if (!porterState) {
-          return;
-        }
-
-        if (!bookingDraft) {
-          showSearchStatus("Please search for porters first.", true);
-          return;
-        }
-
-        try {
-          showSearchStatus(
-            `Sending a booking request to ${porterState.name}...`,
-          );
-
-          const response = await fetch(`${API_BASE_URL}/bookings/request`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              ...bookingDraft,
-              assignedPorter: porterState._id || porterState.id,
-            }),
-          });
-
-          if (!response.ok) {
-            const payload = await response.json().catch(() => ({}));
-            throw new Error(
-              payload.error || `Request failed with status ${response.status}`,
-            );
-          }
-
-          const payload = await response.json();
-          saveCurrentBooking(payload.data);
-
-          showSearchStatus(
-            `Request sent to ${porterState.name}. Wait for them to accept in their dashboard.`,
-            false,
-          );
-          showWaitingPopup(payload.data);
-          startPollingBooking(payload.data);
-        } catch (error) {
-          showSearchStatus(
-            error.message || "Unable to send booking request.",
-            true,
-          );
-        }
-      };
-
-      window.__selectedPorters = [];
-      window.__checkBookingStatus = () => {
-        void pollBookingStatus();
-      };
-      window.__clearBookingStatus = () => {
-        const assignedBookingCard = container.querySelector(
-          "#assignedBookingCard",
-        );
-        const searchStatus = container.querySelector("#searchStatus");
-
-        if (assignedBookingCard) {
-          assignedBookingCard.innerHTML = "";
-        }
-
-        if (searchStatus) {
-          searchStatus.textContent = "";
-        }
-      };
-      window.__goToPayment = () => {
-        const currentBooking = getCurrentBooking();
-        if (currentBooking?._id) {
-          localStorage.setItem(
-            "selectedBooking",
-            JSON.stringify(currentBooking),
-          );
-        }
-        navigate("/payment");
-      };
-
-      const username = localStorage.getItem("username");
-      if (username) {
-        const greetingElement = container.querySelector("#userGreeting");
-        if (greetingElement) {
-          greetingElement.textContent = `Hello ${username}`;
-        }
+        return;
       }
 
-      const persistedBooking = getCurrentBooking();
-      if (persistedBooking?._id) {
-        activeBookingId = persistedBooking._id;
-        startPollingBooking(persistedBooking);
-      }
+      paymentRedirectedRef.current = null;
+    } catch (error) {
+      console.warn("Booking status poll failed:", error);
+    }
+  }, [navigate]);
 
-      window.addEventListener("focus", onWindowFocus);
-      document.addEventListener("visibilitychange", onVisibilityChange);
-
-      // Ensure the legacy page main area does not vertically center content
-      // which can make the top unreachable when dynamic results expand.
-      try {
-        const pageMain = container.querySelector(".main");
-        if (pageMain) {
-          pageMain.style.justifyContent = "flex-start";
-        }
-      } catch (err) {
-        // ignore
-      }
-
-      // Fetch stations from backend and populate the station dropdown
-      (async function fetchAndPopulateStations() {
-        try {
-          const resp = await fetch(`${API_BASE_URL}/stations`);
-          const payload = resp.ok ? await resp.json() : {};
-          const stations =
-            Array.isArray(payload.data) && payload.data.length > 0
-              ? payload.data
-              : FALLBACK_STATIONS;
-          const stationSelect = container.querySelector("#station");
-          if (!stationSelect) return;
-
-          if (!resp.ok) {
-            console.warn(
-              "Using fallback stations because the backend station list was unavailable.",
-            );
-          }
-
-          stations.forEach((s) => {
-            const name = s.name;
-            const coords = s.location?.coordinates || s.coordinates;
-            // populate global lookup used by getStationCoordinates
-            if (Array.isArray(coords) && coords.length === 2) {
-              STATION_COORDINATES[name] = coords;
-            }
-            const opt = document.createElement("option");
-            opt.value = name;
-            opt.textContent = `${name} — ${s.city}`;
-            stationSelect.appendChild(opt);
-          });
-        } catch (err) {
-          console.warn("Failed to load stations for dropdown", err);
-          const stationSelect = container.querySelector("#station");
-          if (!stationSelect) return;
-
-          FALLBACK_STATIONS.forEach((s) => {
-            STATION_COORDINATES[s.name] = s.coordinates;
-            const opt = document.createElement("option");
-            opt.value = s.name;
-            opt.textContent = `${s.name} — ${s.city}`;
-            stationSelect.appendChild(opt);
-          });
-        }
-      })();
-
-      // Tag the document so Book page overrides can win over other CSS files.
-      const htmlElement = document.documentElement;
-      const bodyElement = document.body;
-      htmlElement.classList.add("book-page-html");
-      bodyElement.classList.add("book-page-body");
-
-      window.handleSearch = async (event) => {
-        event.preventDefault();
-        const btn = event.target.querySelector('button[type="submit"]');
-        if (!btn) {
-          return false;
-        }
-
-        const originalText = btn.innerText;
-        const stationInput = container.querySelector("#station");
-        const phoneInput = container.querySelector("#phone");
-        const weightInput = container.querySelector("#weight");
-        const trainInput = container.querySelector("#train_number");
-        const coachInput = container.querySelector("#coach");
-        const seatInput = container.querySelector("#seat_number");
-        const platformInput = container.querySelector("#platform");
-        const timeInput = container.querySelector("#time");
-
-        const stationValue = stationInput?.value?.trim() || "";
-        const phoneValue = phoneInput?.value?.trim() || "";
-        const luggageWeight = Number(weightInput?.value || 0);
-        const demoCoordinates = getStationCoordinates(stationValue);
-        const username = localStorage.getItem("username") || "guest-user";
-
-        if (!phoneValue) {
-          showSearchStatus("Please enter a contact phone number.", true);
-          return false;
-        }
-
-        setButtonState(btn, "Searching...", true);
-        showResultSection();
-        showSearchStatus("Looking up live Atlas porters...");
-
-        try {
-          const originCoordinates =
-            demoCoordinates || (await getBrowserLocation());
-
-          if (!originCoordinates) {
-            showSearchStatus(
-              "Could not derive a location. Enter one of the demo stations or allow browser location access.",
-              true,
-            );
-            renderPorters([], null, stationValue);
-            return false;
-          }
-
-          bookingDraft = {
-            userId: username,
-            userPhone: phoneValue,
-            station: stationValue,
-            location: {
-              type: "Point",
-              coordinates: originCoordinates,
-            },
-            items: [
-              {
-                name: `Luggage from coach ${coachInput?.value?.trim() || "N/A"} seat ${seatInput?.value?.trim() || "N/A"}`,
-                weight:
-                  Number.isFinite(luggageWeight) && luggageWeight > 0
-                    ? luggageWeight
-                    : 25,
-                description: `Train ${trainInput?.value?.trim() || "N/A"}, Platform ${platformInput?.value?.trim() || "N/A"}, Arrival ${timeInput?.value || "N/A"}`,
-              },
-            ],
-            specialRequests: `Train ${trainInput?.value?.trim() || "N/A"} | Coach ${coachInput?.value?.trim() || "N/A"} | Seat ${seatInput?.value?.trim() || "N/A"} | Platform ${platformInput?.value?.trim() || "N/A"} | Arrival ${timeInput?.value || "N/A"}`,
-          };
-
-          const query = new URLSearchParams({
-            longitude: String(originCoordinates[0]),
-            latitude: String(originCoordinates[1]),
-            maxDistance: "5000",
-            limit: "5",
-          });
-
-          if (demoCoordinates && stationValue) {
-            query.set("station", stationValue);
-          }
-
-          const response = await fetch(
-            `${API_BASE_URL}/bookings/nearest-porters?${query.toString()}`,
-          );
-          if (!response.ok) {
-            throw new Error(`Request failed with status ${response.status}`);
-          }
-
-          const nearestPayload = await response.json();
-          const porters = Array.isArray(nearestPayload.data)
-            ? nearestPayload.data
-            : [];
-
-          const availablePorters = Array.isArray(porters) ? porters : [];
-
-          window.__selectedPorters = availablePorters;
-          renderPorters(
-            availablePorters,
-            originCoordinates,
-            stationValue || "your location",
-          );
-          showSearchStatus(
-            availablePorters.length > 0
-              ? `${availablePorters.length} nearby porter${availablePorters.length === 1 ? "" : "s"} found and available.`
-              : "No available porters found nearby. Try a different station or enable location access.",
-            false,
-          );
-        } catch (error) {
-          console.error("Nearest porter search failed:", error);
-          renderPorters([], null, stationValue);
-          showSearchStatus(
-            error.message ||
-              "Search failed. Check that the backend is running on port 5001 and Atlas is connected.",
-            true,
-          );
-        } finally {
-          setButtonState(btn, originalText, false);
-        }
-
-        return false;
-      };
-
-      window.logout = () => {
-        if (confirm("Are you sure you want to logout?")) {
-          localStorage.removeItem("username");
-          localStorage.removeItem("latestBookingRequest");
-          localStorage.removeItem("selectedBooking");
-          navigate("/home");
-        }
-      };
-
-      return () => {
-        if (bookingPollTimer) {
-          window.clearInterval(bookingPollTimer);
-        }
-        window.removeEventListener("focus", onWindowFocus);
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-        window.handleSearch = previousFns.handleSearch;
-        window.logout = previousFns.logout;
-        window.selectPorter = previousFns.selectPorter;
-        window.requestPorter = previousFns.requestPorter;
-        window.__selectedPorters = [];
-        window.__checkBookingStatus = undefined;
-        window.__clearBookingStatus = undefined;
-        window.__goToPayment = undefined;
-        bookingPollTimer = null;
-        activeBookingId = null;
-        paymentRedirectedBookingId = null;
-        htmlElement.classList.remove("book-page-html");
-        bodyElement.classList.remove("book-page-body");
-      };
+  const startPollingBooking = useCallback(
+    (booking) => {
+      if (!booking) return;
+      activeBookingIdRef.current = booking._id;
+      if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = window.setInterval(pollBookingStatus, 4000);
+      void pollBookingStatus();
     },
-    [navigate],
+    [pollBookingStatus],
   );
 
-  useLegacyPage({ containerRef, html: BOOK_HTML, navigate, setup });
+  useEffect(() => {
+    (async () => {
+      try {
+        const payload = await getStations();
+        const stations = Array.isArray(payload.data) && payload.data.length > 0 ? payload.data : FALLBACK_STATIONS;
+        stations.forEach((s) => {
+          const coords = s.location?.coordinates || s.coordinates;
+          if (Array.isArray(coords) && coords.length === 2) {
+            stationCoordsRef.current[s.name] = coords;
+          }
+        });
+        setStationOptions(stations.map((s) => ({ name: s.name, city: s.city })));
+      } catch (error) {
+        console.warn("Failed to load stations for dropdown", error);
+        FALLBACK_STATIONS.forEach((s) => {
+          stationCoordsRef.current[s.name] = s.coordinates;
+        });
+        setStationOptions(FALLBACK_STATIONS.map((s) => ({ name: s.name, city: s.city })));
+      }
+    })();
 
-  return <div ref={containerRef} />;
+    const persisted = readJSON("latestBookingRequest");
+    if (persisted?._id) {
+      startPollingBooking(persisted);
+    }
+
+    const onWindowFocus = () => void pollBookingStatus();
+    const onVisibilityChange = () => {
+      if (!document.hidden) void pollBookingStatus();
+    };
+    window.addEventListener("focus", onWindowFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
+      window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const updateField = (field) => (event) => setForm((f) => ({ ...f, [field]: event.target.value }));
+
+  const handleSearch = async (event) => {
+    event.preventDefault();
+
+    const stationValue = form.station.trim();
+    const phoneValue = form.phone.trim();
+    const luggageWeight = Number(form.weight || 0);
+
+    if (!phoneValue) {
+      setSearchStatus({ text: "Please enter a contact phone number.", isError: true });
+      return;
+    }
+
+    setIsSearching(true);
+    setShowResults(true);
+    setSearchStatus({ text: "Looking up live Atlas porters...", isError: false });
+    requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+
+    try {
+      const demoCoordinates = getStationCoordinates(stationValue);
+      const originCoordinates = demoCoordinates || (await getBrowserLocation());
+
+      if (!originCoordinates) {
+        setSearchStatus({
+          text: "Could not derive a location. Enter one of the demo stations or allow browser location access.",
+          isError: true,
+        });
+        setResultHeading({ title: `Nearest Porters${stationValue ? ` for ${stationValue}` : ""}`, subtitle: "No porters matched the current search. Try a different station or use your location." });
+        setPorters([]);
+        return;
+      }
+
+      bookingDraftRef.current = {
+        userId: username || "guest-user",
+        userPhone: phoneValue,
+        station: stationValue,
+        location: { type: "Point", coordinates: originCoordinates },
+        items: [
+          {
+            name: `Luggage from coach ${form.coach.trim() || "N/A"} seat ${form.seat_number.trim() || "N/A"}`,
+            weight: Number.isFinite(luggageWeight) && luggageWeight > 0 ? luggageWeight : 25,
+            description: `Train ${form.train_number.trim() || "N/A"}, Platform ${form.platform.trim() || "N/A"}, Arrival ${form.time || "N/A"}`,
+          },
+        ],
+        specialRequests: `Train ${form.train_number.trim() || "N/A"} | Coach ${form.coach.trim() || "N/A"} | Seat ${form.seat_number.trim() || "N/A"} | Platform ${form.platform.trim() || "N/A"} | Arrival ${form.time || "N/A"}`,
+      };
+
+      const payload = await findNearestPorters({
+        longitude: originCoordinates[0],
+        latitude: originCoordinates[1],
+        maxDistance: 5000,
+        limit: 5,
+        station: demoCoordinates && stationValue ? stationValue : undefined,
+      });
+
+      const availablePorters = Array.isArray(payload.data) ? payload.data : [];
+      setPorters(availablePorters.map((porter) => ({ ...porter, __origin: originCoordinates })));
+      setResultHeading({
+        title: `Nearest Porters${stationValue ? ` for ${stationValue}` : ""}`,
+        subtitle:
+          availablePorters.length > 0
+            ? "Choose a porter from the live Atlas results below."
+            : "No porters matched the current search. Try a different station or use your location.",
+      });
+      setSearchStatus({
+        text:
+          availablePorters.length > 0
+            ? `${availablePorters.length} nearby porter${availablePorters.length === 1 ? "" : "s"} found and available.`
+            : "No available porters found nearby. Try a different station or enable location access.",
+        isError: false,
+      });
+    } catch (error) {
+      console.error("Nearest porter search failed:", error);
+      setPorters([]);
+      setSearchStatus({
+        text: error.message || "Search failed. Check that the backend is running on port 5001 and Atlas is connected.",
+        isError: true,
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const requestPorter = async (porter) => {
+    if (!bookingDraftRef.current) {
+      setSearchStatus({ text: "Please search for porters first.", isError: true });
+      return;
+    }
+
+    try {
+      setSearchStatus({ text: `Sending a booking request to ${porter.name}...`, isError: false });
+
+      const payload = await requestBooking({
+        ...bookingDraftRef.current,
+        assignedPorter: porter._id || porter.id,
+      });
+
+      saveCurrentBooking(payload.data);
+      setSearchStatus({
+        text: `Request sent to ${porter.name}. Wait for them to accept in their dashboard.`,
+        isError: false,
+      });
+      setStatusCard({
+        title: "Waiting for porter to accept",
+        subtitle: "Your request is live. We will keep checking for the porter response.",
+        status: `Booking ID: ${payload.data._id}`,
+        body: "This is a live request. Keep this page open or switch back to it and press Check Status if needed.",
+        action: "waiting",
+      });
+      startPollingBooking(payload.data);
+    } catch (error) {
+      setSearchStatus({ text: error.message || "Unable to send booking request.", isError: true });
+    }
+  };
+
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to logout?")) {
+      localStorage.removeItem("username");
+      localStorage.removeItem("latestBookingRequest");
+      localStorage.removeItem("selectedBooking");
+      navigate("/home");
+    }
+  };
+
+  const goToPayment = () => {
+    const current = readJSON("latestBookingRequest");
+    if (current?._id) {
+      localStorage.setItem("selectedBooking", JSON.stringify(current));
+    }
+    navigate("/payment");
+  };
+
+  return (
+    <div className="page book-page">
+      <Navbar
+        variant="translucent"
+        links={NAV_LINKS}
+        activeHref="/book"
+        actions={
+          <button className="btn btn-outline btn-sm" onClick={handleLogout}>
+            Logout
+          </button>
+        }
+      />
+
+      <main className="page-main container book-main">
+        {username && <div className="user-greeting">Hello {username}</div>}
+
+        <div className="card book-form-card">
+          <h1 style={{ marginBottom: 24, fontSize: 28 }}>Book a Porter</h1>
+
+          <form onSubmit={handleSearch} noValidate>
+            <div className="field">
+              <label className="field-label">Train Number</label>
+              <input className="input" placeholder="e.g. 12951" required value={form.train_number} onChange={updateField("train_number")} />
+            </div>
+
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Coach</label>
+                <input className="input" placeholder="e.g. B2" required value={form.coach} onChange={updateField("coach")} />
+              </div>
+              <div className="field">
+                <label className="field-label">Seat Number</label>
+                <input className="input" placeholder="e.g. 45" required value={form.seat_number} onChange={updateField("seat_number")} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="field-label">Arrival Station</label>
+              <select className="select" required value={form.station} onChange={updateField("station")}>
+                <option value="">Select a station</option>
+                {stationOptions.map((s) => (
+                  <option key={s.name} value={s.name}>
+                    {s.name} — {s.city}
+                  </option>
+                ))}
+              </select>
+              <div className="field-hint">Choose a seeded station from the dropdown. This prevents outside station names.</div>
+            </div>
+
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Contact Phone</label>
+                <input type="tel" className="input" placeholder="e.g. 9876543210" required value={form.phone} onChange={updateField("phone")} />
+              </div>
+              <div className="field">
+                <label className="field-label">Approx. Luggage Weight (kg)</label>
+                <input type="number" min="0" step="1" className="input" required value={form.weight} onChange={updateField("weight")} />
+              </div>
+            </div>
+
+            <div className="grid-2">
+              <div className="field">
+                <label className="field-label">Platform Number</label>
+                <input className="input" placeholder="e.g. 12" required value={form.platform} onChange={updateField("platform")} />
+              </div>
+              <div className="field">
+                <label className="field-label">Arrival Time</label>
+                <input type="time" className="input" required value={form.time} onChange={updateField("time")} />
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-block" disabled={isSearching}>
+              {isSearching ? "Searching..." : "Search Nearby Porters"}
+            </button>
+          </form>
+        </div>
+
+        {showResults && (
+          <div className="card result-card" ref={resultRef} style={{ marginTop: 24 }}>
+            <h3 style={{ color: "var(--blue-light)", marginBottom: 8 }}>{resultHeading.title}</h3>
+            <p style={{ color: "var(--text-muted)" }}>{resultHeading.subtitle}</p>
+            {searchStatus.text && (
+              <div className="search-status" style={{ color: searchStatus.isError ? "#fca5a5" : "var(--text-muted)" }}>
+                {searchStatus.text}
+              </div>
+            )}
+
+            {statusCard && (
+              <div className="status-card">
+                <div className="status-card-title">{statusCard.title}</div>
+                <div>{statusCard.body}</div>
+                <div className="status-card-meta">{statusCard.status}</div>
+                {statusCard.action === "waiting" && (
+                  <div className="status-card-actions">
+                    <button type="button" className="btn btn-primary btn-sm" onClick={() => void pollBookingStatus()}>
+                      Check Status
+                    </button>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setStatusCard(null)}>
+                      Hide
+                    </button>
+                  </div>
+                )}
+                {statusCard.action === "payment" && (
+                  <div className="status-card-actions">
+                    <button type="button" className="btn btn-primary btn-sm" onClick={goToPayment}>
+                      Proceed to Payment
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="porter-list">
+              {porters.length === 0 && !statusCard && (
+                <div className="porter-empty">
+                  No live match found in Atlas for this search. If you typed a non-demo station, try one of the
+                  seeded stations or allow location access.
+                </div>
+              )}
+              {porters.map((porter, index) => {
+                const distanceKm = getDistanceKm(porter.__origin, porter.location?.coordinates);
+                const distanceText = typeof distanceKm === "number" ? `${distanceKm.toFixed(1)} km away` : "Distance unavailable";
+                return (
+                  <div className="porter-card" key={porter._id || index}>
+                    <div className="porter-preview">
+                      <div className="porter-avatar" />
+                      <div>
+                        <div className="porter-name">{porter.name}</div>
+                        <div className="porter-meta">
+                          {porter.station} • ⭐ {porter.rating} • {distanceText}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="porter-details">
+                      Capacity: {porter.maxLoad} kg
+                      <br />
+                      Skills: {Array.isArray(porter.skills) && porter.skills.length > 0 ? porter.skills.join(", ") : "No skills listed"}
+                    </div>
+                    <div className="grid-2">
+                      <Link to="/porter-profile" className="btn btn-outline btn-sm" style={{ textAlign: "center" }}>
+                        View Details
+                      </Link>
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => requestPorter(porter)}>
+                        Send Request
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
 }

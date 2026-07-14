@@ -1,0 +1,92 @@
+.porter-dashboard-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(16, 29, 51, 0.8), rgba(16, 29, 51, 0.88)),
+    url("../assets/train-coach.webp") center/cover fixed no-repeat;
+}
+
+.dashboard-main {
+  padding: 40px 32px 100px;
+  max-width: 760px;
+}
+
+.stat-row {
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 22px;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.stat-figure {
+  font-family: var(--font-serif);
+  font-size: 26px;
+}
+
+.skills-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.skill-chip {
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--blue-soft);
+  color: var(--blue-light);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.active-job {
+  margin-bottom: 30px;
+  border-color: var(--red);
+  background: var(--red-soft);
+}
+
+.requests-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 10px;
+  scroll-margin-top: 24px;
+}
+
+.requests-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.requests-hint {
+  margin: 6px 0 20px;
+  font-size: 14px;
+}
+
+.requests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.request-empty {
+  padding: 24px;
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+
+.request-card {
+  padding: 20px;
+}

@@ -1,0 +1,117 @@
+.book-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(rgba(16, 29, 51, 0.8), rgba(16, 29, 51, 0.88)),
+    url("../assets/train-coach.webp") center/cover fixed no-repeat;
+}
+
+.book-main {
+  padding: 40px 32px 80px;
+  max-width: 720px;
+}
+
+.user-greeting {
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.book-form-card {
+  padding: 32px;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--text-muted-2);
+}
+
+.result-card {
+  padding: 28px;
+}
+
+.search-status {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.status-card {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated-2);
+  border: 1px solid var(--border);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.status-card-title {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.status-card-meta {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.status-card-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.porter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.porter-empty {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated-2);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.porter-card {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated-2);
+}
+
+.porter-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.porter-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red), var(--blue));
+  flex-shrink: 0;
+}
+
+.porter-name {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.porter-meta {
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+.porter-details {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}

@@ -1,0 +1,185 @@
+.home-page .hero {
+  position: relative;
+  min-height: 640px;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 90px;
+  background:
+    linear-gradient(to top, var(--bg) 4%, rgba(16, 29, 51, 0.55) 45%, rgba(16, 29, 51, 0.35) 100%),
+    url("https://images.hindustantimes.com/rf/image_size_630x354/HT/p2/2018/06/05/Pictures/passengers-station-along-railway-platform-carrying-luggage_c7ccd1bc-68bc-11e8-8033-47bccc77d658.jpg")
+      center/cover no-repeat;
+}
+
+.hero-inner {
+  max-width: 720px;
+}
+
+.hero-headline {
+  font-size: clamp(38px, 6vw, 64px);
+  color: #fff;
+  margin-bottom: 22px;
+}
+
+.hero-headline em {
+  color: var(--blue-light);
+}
+
+.hero-sub {
+  color: rgba(243, 246, 249, 0.82);
+  font-size: 17px;
+  max-width: 540px;
+  margin-bottom: 30px;
+}
+
+.btn-on-hero {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #fff;
+}
+
+.btn-on-hero:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+.btn-lg {
+  height: 54px;
+  padding: 0 32px;
+  font-size: 15px;
+}
+
+.section {
+  padding: 90px 0;
+}
+
+.step-index {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 34px;
+  color: var(--red);
+}
+
+.story-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  padding-bottom: 20px;
+  background: var(--bg-elevated);
+}
+
+.story-image {
+  height: 190px;
+  background-size: cover;
+  background-position: center;
+}
+
+.story-tag {
+  margin: 18px 20px 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--blue-light);
+}
+
+.story-card h3 {
+  margin-left: 20px;
+  margin-right: 20px;
+  font-size: 18px;
+}
+
+.story-card p {
+  margin-left: 20px;
+  margin-right: 20px;
+}
+
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity {
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.activity:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.activity-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  height: 34px;
+  padding: 0 16px;
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+.btn-danger {
+  color: var(--red);
+  border-color: var(--red-soft);
+}
+
+.btn-danger:hover {
+  background: var(--red-soft);
+  border-color: var(--red);
+}
+
+.review-section {
+  margin-top: 22px;
+  text-align: center;
+}
+
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  resize: vertical;
+}
+
+.review-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .home-page .hero {
+    min-height: 560px;
+    padding-bottom: 60px;
+  }
+
+  .section {
+    padding: 60px 0;
+  }
+}
