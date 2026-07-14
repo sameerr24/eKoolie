@@ -1,43 +1,14 @@
-/**
- * BOOKING MODEL - DEMONSTRATING ARRAY OPERATIONS AND REFERENCES
- *
- * This schema showcases:
- * - ObjectId references to Porter model
- * - Nested array of objects (items array)
- * - Enum for status validation
- * - Calculated fields (totalWeight)
- */
-
 const mongoose = require("mongoose");
 
-/**
- * Booking Schema
- * Represents a porter booking request
- */
+// A traveller's porter booking: pickup details, lifecycle status, assigned
+// porter reference, and the items being carried.
 const bookingSchema = new mongoose.Schema(
   {
-    // User Information
-    userId: {
-      type: String,
-      required: true,
-    },
-    userPhone: {
-      type: String,
-      required: true,
-    },
+    userId: { type: String, required: true },
+    userPhone: { type: String, required: true },
+    station: { type: String, required: true, trim: true }, // free-form to allow seeded station names
 
-    // Location Details
-    station: {
-      type: String,
-      required: true,
-      trim: true,
-      // Allow free-form seeded station names (no enum)
-    },
-
-    /**
-     * GEOSPATIAL DATA for pickup location
-     * Same GeoJSON Point format as Porter model
-     */
+    // GeoJSON Point, coordinates as [longitude, latitude]
     location: {
       type: {
         type: String,
@@ -45,166 +16,56 @@ const bookingSchema = new mongoose.Schema(
         required: true,
       },
       coordinates: {
-        type: [Number], // [longitude, latitude]
+        type: [Number],
         required: true,
       },
     },
 
-    /**
-     * STATUS ENUM
-     *
-     * Booking lifecycle:
-     * 1. pending - waiting for porter assignment
-     * 2. assigned - porter has been assigned
-     * 3. in_progress - porter arrived at location
-     * 4. completed - booking finished
-     * 5. cancelled - booking was cancelled
-     */
+    // requested -> pending -> assigned -> in_progress -> completed | cancelled
     status: {
       type: String,
-      enum: [
-        "requested",
-        "pending",
-        "assigned",
-        "in_progress",
-        "completed",
-        "cancelled",
-      ],
+      enum: ["requested", "pending", "assigned", "in_progress", "completed", "cancelled"],
       default: "pending",
     },
-
     paymentStatus: {
       type: String,
       enum: ["unpaid", "pending", "paid"],
       default: "unpaid",
     },
 
-    /**
-     * REFERENCE TO PORTER (ObjectId)
-     *
-     * Demonstrates Mongoose reference relationship
-     * Use .populate() to fetch full Porter document
-     *
-     * Example:
-     * await Booking.findById(id).populate('assignedPorter')
-     */
     assignedPorter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Porter",
       default: null,
     },
 
-    /**
-     * NESTED ARRAY OF OBJECTS (Items)
-     *
-     * Demonstrates array operations:
-     * - $push: Add new item
-     * - $pull: Remove item by condition
-     * - $set: Update array element
-     *
-     * Each item tracks what's being transported
-     *
-     * Example Documents:
-     * items: [
-     *   { name: 'Suitcase', weight: 15 },
-     *   { name: 'Backpack', weight: 8 }
-     * ]
-     */
     items: [
       {
-        name: {
-          type: String,
-          required: true,
-        },
-        weight: {
-          type: Number, // in kg
-          required: true,
-          min: 0,
-        },
-        description: {
-          type: String,
-          default: "",
-        },
+        name: { type: String, required: true },
+        weight: { type: Number, required: true, min: 0 }, // kg
+        description: { type: String, default: "" },
       },
     ],
+    totalWeight: { type: Number, default: 0 }, // derived from items, must be <= porter.maxLoad
 
-    /**
-     * TOTAL LUGGAGE WEIGHT
-     *
-     * Calculated from items array
-     * Must be <= Porter's maxLoad capacity
-     */
-    totalWeight: {
-      type: Number,
-      default: 0,
-    },
+    estimatedFare: { type: Number, required: true },
+    actualFare: { type: Number, default: null },
 
-    // Pricing
-    estimatedFare: {
-      type: Number,
-      required: true,
-    },
-    actualFare: {
-      type: Number,
-      default: null,
-    },
-
-    // Additional Details
-    specialRequests: {
-      type: String,
-      default: "",
-    },
-    rating: {
-      type: Number,
-      min: 1,
-      max: 5,
-      default: null,
-    },
+    specialRequests: { type: String, default: "" },
+    rating: { type: Number, min: 1, max: 5, default: null },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
-/**
- * INDEXES for Booking Model
- */
-
-/**
- * 1. Index on status for quick filtering
- * Use Case: "Get all pending bookings"
- */
 bookingSchema.index({ status: 1 });
+bookingSchema.index({ userId: 1, status: 1 }); // "this user's pending bookings"
+bookingSchema.index({ assignedPorter: 1 }); // "this porter's bookings"
+bookingSchema.index({ station: 1, status: 1 }); // "pending bookings at this station"
 
-/**
- * 2. Compound index: userId + status
- * Use Case: "Get user's pending bookings"
- */
-bookingSchema.index({ userId: 1, status: 1 });
-
-/**
- * 3. Index on assignedPorter (reference field)
- * Use Case: "Find all bookings for a specific porter"
- */
-bookingSchema.index({ assignedPorter: 1 });
-
-/**
- * 4. Index on station + status
- * Use Case: "Get pending bookings at Central Station"
- */
-bookingSchema.index({ station: 1, status: 1 });
-
-/**
- * 5. TTL Index for automatic cancellation of old pending bookings
- * Automatically removes documents 24 hours after creation if status is still 'pending'
- * MongoDB will scan this every 60 seconds (default TTL monitor)
- */
+// Auto-cancel stale pending bookings 24h after creation
 bookingSchema.index(
   { createdAt: 1 },
-  {
-    expireAfterSeconds: 86400, // 24 hours
-    partialFilterExpression: { status: "pending" },
-  },
+  { expireAfterSeconds: 86400, partialFilterExpression: { status: "pending" } },
 );
 
 module.exports = mongoose.model("Booking", bookingSchema);

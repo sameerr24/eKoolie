@@ -1,25 +1,4 @@
-/**
- * ========================================
- * EKOOLIE MONGODB QUERIES
- * ========================================
- *
- * Run with VS Code MongoDB Extension
- *
- * How to use:
- * 1. Install: mongodb.mongodb-vscode extension
- * 2. Connect to MongoDB Atlas cluster
- * 3. Right-click any query → "Run Selection" or "Run All"
- * 4. View results in the output panel
- *
- * File format: .mongodb.js (not .js!)
- */
-
 use("ekoolie");
-
-// ========================================
-// 1. BASIC QUERIES - FIND PORTERS
-// ========================================
-
 // Find all porters
 db.porters.find();
 
@@ -32,12 +11,7 @@ db.porters.find({ station: "Central Station" });
 // Find high-rated porters (>= 4.5)
 db.porters.find({ rating: { $gte: 4.5 } });
 
-// ========================================
-// 2. GEOSPATIAL QUERIES - FIND NEAREST
-// ========================================
-
 // Find 5 nearest porters to Central Station location
-// within 5 km of a location
 db.porters
   .find({
     location: {
@@ -65,10 +39,6 @@ db.porters.find({
   },
 });
 
-// ========================================
-// 3. ARRAY OPERATIONS - SKILLS
-// ========================================
-
 // Find porters with "heavy luggage" skill
 db.porters.find({ skills: "heavy luggage" });
 
@@ -81,10 +51,6 @@ db.porters.find({
 db.porters.find({
   skills: { $all: ["heavy luggage", "express service"] },
 });
-
-// ========================================
-// 4. BOOKING QUERIES
-// ========================================
 
 // Find all pending bookings
 db.bookings.find({ status: "pending" });
@@ -106,12 +72,8 @@ db.bookings.find({
 // Find bookings for specific user
 db.bookings.find({ userId: "user_001" });
 
-// ========================================
-// 5. AGGREGATION PIPELINES
-// ========================================
-
+//AGGREGATION
 // Porter Statistics by Station
-// Shows: count, avg rating, total earnings per station
 db.porters.aggregate([
   {
     $group: {
@@ -157,9 +119,6 @@ db.porters.aggregate([
   { $sort: { porterCount: -1 } },
 ]);
 
-// ========================================
-// 6. BEST PORTER ASSIGNMENT (Core Feature)
-// ========================================
 
 // Find best porter for booking near Central Station
 // Considers: proximity, availability, capacity, rating
@@ -172,7 +131,7 @@ db.porters.aggregate([
       spherical: true,
       query: {
         isAvailable: true,
-        station: "Central Station",
+        station: "New Delhi Station",
       },
     },
   },
@@ -196,34 +155,23 @@ db.porters.aggregate([
   },
 ]);
 
-// ========================================
-// 7. UPDATE OPERATIONS
-// ========================================
-
 // Add skill to porter (use $addToSet to avoid duplicates)
-// UNCOMMENT TO RUN:
-// db.porters.updateOne(
-//   { name: "Rajesh Kumar" },
-//   { $addToSet: { skills: "new-skill" } }
-// );
+db.porters.updateOne(
+  { name: "Rajesh Kumar" },
+  { $addToSet: { skills: "new-skill" } }
+);
 
 // Remove skill from porter (use $pull)
-// UNCOMMENT TO RUN:
-// db.porters.updateOne(
-//   { name: "Rajesh Kumar" },
-//   { $pull: { skills: "old-skill" } }
-// );
+db.porters.updateOne(
+  { name: "Rajesh Kumar" },
+  { $pull: { skills: "old-skill" } }
+);
 
 // Update porter availability
-// UNCOMMENT TO RUN:
-// db.porters.updateOne(
-//   { name: "Rajesh Kumar" },
-//   { $set: { isAvailable: false } }
-// );
-
-// ========================================
-// 8. COUNTING & STATISTICS
-// ========================================
+db.porters.updateOne(
+  { name: "Rajesh Kumar" },
+  { $set: { isAvailable: false } }
+);
 
 // Count total porters
 db.porters.countDocuments();
@@ -247,10 +195,6 @@ db.porters.find().sort({ rating: -1 }).limit(5);
 // Top 5 most experienced porters
 db.porters.find().sort({ totalJobs: -1 }).limit(5);
 
-// ========================================
-// 9. COMPLEX QUERIES - OR, AND
-// ========================================
-
 // Find porters with high rating OR high capacity
 db.porters.find({
   $or: [{ rating: { $gt: 4.5 } }, { maxLoad: { $gt: 80 } }],
@@ -265,19 +209,11 @@ db.porters.find({
   ],
 });
 
-// ========================================
-// 10. INDEXES INFORMATION
-// ========================================
-
 // Get all indexes on porters collection
 db.porters.getIndexes();
 
 // Get all indexes on bookings collection
 db.bookings.getIndexes();
-
-// ========================================
-// 11. EXPLAIN QUERY EXECUTION
-// ========================================
 
 // Check if index is being used (look for executionStages)
 db.porters.find({ station: "Central Station" }).explain("executionStats");

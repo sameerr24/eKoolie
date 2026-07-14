@@ -1,10 +1,3 @@
-/**
- * DATABASE CONFIGURATION
- *
- * This file handles MongoDB connection setup using Mongoose.
- * Connection pooling is automatically managed by Mongoose.
- */
-
 const mongoose = require("mongoose");
 require("dotenv").config({
   path: require("path").join(__dirname, "..", ".env"),
@@ -13,10 +6,7 @@ require("dotenv").config({
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/ekoolie";
 
-/**
- * Connect to MongoDB
- * Mongoose handles connection pooling and automatic retries
- */
+// Mongoose manages pooling/retries internally, so this is just a single connect call.
 const connectDB = async () => {
   try {
     await mongoose.connect(MONGODB_URI, {
