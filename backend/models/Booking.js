@@ -80,10 +80,14 @@ bookingSchema.index({ userId: 1, status: 1 }); // "this user's pending bookings"
 bookingSchema.index({ assignedPorter: 1 }); // "this porter's bookings"
 bookingSchema.index({ station: 1, status: 1 }); // "pending bookings at this station"
 
-// Auto-cancel stale pending bookings 24h after creation
+// Auto-remove stale unresolved bookings 24h after creation. The real
+// traveller-facing flow (createBookingRequest) creates bookings directly as
+// "requested", never "pending" — "pending" only exists for the older
+// createBooking+assignBestPorter path — so both are covered here; otherwise
+// a request a porter never responds to would sit in the DB forever.
 bookingSchema.index(
   { createdAt: 1 },
-  { expireAfterSeconds: 86400, partialFilterExpression: { status: "pending" } },
+  { expireAfterSeconds: 86400, partialFilterExpression: { status: { $in: ["pending", "requested"] } } },
 );
 
 module.exports = mongoose.model("Booking", bookingSchema);

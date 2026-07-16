@@ -106,12 +106,19 @@ exports.getAllBookings = asyncHandler(async (req, res) => {
   res.json({ count: bookings.length, data: bookings });
 });
 
-// GET /bookings/:id
+// GET /bookings/:id — the owning traveller or the assigned porter may view it
 exports.getBookingById = asyncHandler(async (req, res) => {
   const booking = await Booking.findById(req.params.id).populate("assignedPorter");
   if (!booking) {
     return res.status(404).json({ error: "Booking not found" });
   }
+
+  const isOwner = booking.userId === req.user.id;
+  const isAssignedPorter = req.user.role === "porter" && booking.assignedPorter?._id?.toString() === req.user.id;
+  if (!isOwner && !isAssignedPorter) {
+    return res.status(403).json({ error: "This booking does not belong to you" });
+  }
+
   res.json({ data: booking });
 });
 
@@ -159,6 +166,9 @@ exports.assignBestPorter = asyncHandler(async (req, res) => {
   const booking = await Booking.findById(bookingId);
   if (!booking) {
     return res.status(404).json({ error: "Booking not found" });
+  }
+  if (booking.userId !== req.user.id) {
+    return res.status(403).json({ error: "This booking does not belong to you" });
   }
   if (booking.status !== "pending") {
     return res.status(400).json({ error: "Booking must be in pending status" });
@@ -210,7 +220,9 @@ exports.assignBestPorter = asyncHandler(async (req, res) => {
 });
 
 // POST /bookings/:bookingId/items — $push appends to the items array, then
-// totalWeight/estimatedFare are recalculated from the full array.
+// totalWeight/estimatedFare are recalculated from the full array. Both feed
+// directly into what Razorpay charges (paymentController.createOrder), so
+// this is gated the same as any other booking-mutating endpoint.
 exports.addItemToBooking = asyncHandler(async (req, res) => {
   const { bookingId } = req.params;
   const { name, weight, description } = req.body;
@@ -218,18 +230,30 @@ exports.addItemToBooking = asyncHandler(async (req, res) => {
   if (!name || weight === undefined) {
     return res.status(400).json({ error: "name and weight are required" });
   }
+  const parsedWeight = parseFloat(weight);
+  if (!Number.isFinite(parsedWeight) || parsedWeight < 0) {
+    return res.status(400).json({ error: "weight must be a non-negative number" });
+  }
+
+  const existing = await Booking.findById(bookingId);
+  if (!existing) {
+    return res.status(404).json({ error: "Booking not found" });
+  }
+  if (existing.userId !== req.user.id) {
+    return res.status(403).json({ error: "This booking does not belong to you" });
+  }
 
   let booking = await Booking.findByIdAndUpdate(
     bookingId,
-    { $push: { items: { name, weight: parseFloat(weight), description: description || "" } } },
-    { new: true },
+    { $push: { items: { name, weight: parsedWeight, description: description || "" } } },
+    { new: true, runValidators: true },
   );
 
   const { totalWeight, estimatedFare } = calculateTotals(booking.items);
   booking = await Booking.findByIdAndUpdate(
     bookingId,
     { totalWeight, estimatedFare },
-    { new: true },
+    { new: true, runValidators: true },
   );
 
   res.json({ message: "Item added to booking", data: booking });
@@ -253,6 +277,27 @@ exports.updateBookingStatus = asyncHandler(async (req, res) => {
   }
 
   res.json({ message: "Booking status updated", data: updatedBooking });
+});
+
+// POST /bookings/:bookingId/cancel — traveller withdraws their own request
+// before a porter has accepted it. Once a porter has accepted (assigned/
+// in_progress), cancelling isn't a simple status flip, so it's blocked here.
+exports.cancelBooking = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    return res.status(404).json({ error: "Booking not found" });
+  }
+  if (booking.userId !== req.user.id) {
+    return res.status(403).json({ error: "This booking does not belong to you" });
+  }
+  if (booking.status !== "requested") {
+    return res.status(400).json({ error: "Only a booking still waiting for porter acceptance can be cancelled" });
+  }
+
+  const updatedBooking = await Booking.findByIdAndUpdate(bookingId, { status: "cancelled" }, { new: true });
+  res.json({ message: "Booking cancelled", data: updatedBooking });
 });
 
 // POST /bookings/:bookingId/payment

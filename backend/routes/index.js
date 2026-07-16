@@ -67,6 +67,7 @@ router.get("/", (req, res) => {
           "GET /api/bookings/:id": "Get booking by ID",
           "GET /api/bookings/nearest-porters": "Find nearest porters (geospatial)",
           "POST /api/bookings/:bookingId/assign-best-porter": "Assign best porter (aggregation)",
+          "POST /api/bookings/:bookingId/cancel": "Cancel your own request before a porter accepts it",
           "POST /api/bookings/:bookingId/payment": "Mark booking as paid (Cash on Service only)",
           "POST /api/bookings/:bookingId/create-order": "Create a Razorpay order for online payment",
           "POST /api/bookings/:bookingId/verify-payment": "Verify a Razorpay payment signature",

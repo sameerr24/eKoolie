@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "../components/layout/Navbar";
 import { getAccessToken } from "../api/client";
-import { getBooking, getBookingLocation } from "../api/bookings";
+import { getBooking, getBookingLocation, cancelBooking } from "../api/bookings";
 import { PorterLocationMap } from "../components/PorterLocationMap";
 import "./TrackingPage.css";
 
@@ -23,6 +23,7 @@ export function TrackingPage() {
   const [notFound, setNotFound] = useState(false);
   const [porterCoordinates, setPorterCoordinates] = useState(null);
   const [deferredPayment, setDeferredPayment] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const pollTimerRef = useRef(null);
 
@@ -77,6 +78,21 @@ export function TrackingPage() {
     navigate("/payment");
   };
 
+  const handleCancel = async () => {
+    if (!booking?._id || !window.confirm("Cancel this request?")) return;
+    setIsCancelling(true);
+    try {
+      const payload = await cancelBooking(booking._id);
+      setBooking(payload.data);
+      localStorage.setItem("latestBookingRequest", JSON.stringify(payload.data));
+      localStorage.setItem("selectedBooking", JSON.stringify(payload.data));
+    } catch (error) {
+      window.alert(error.message || "Unable to cancel this request.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
   const porterName = booking?.assignedPorter?.name || "your porter";
   const isActiveJob = booking?.status === "assigned" || booking?.status === "in_progress";
   const isPaid = booking?.paymentStatus === "paid";
@@ -127,14 +143,22 @@ export function TrackingPage() {
                   >
                     Check Status
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={handleCancel}
+                    disabled={isCancelling}
+                  >
+                    {isCancelling ? "Cancelling..." : "Cancel Request"}
+                  </button>
                 </div>
               </div>
             )}
 
             {booking.status === "cancelled" && (
               <div className="status-card">
-                <div className="status-card-title">Request declined</div>
-                <div>{porterName} was unable to take this booking. Please search again for another porter.</div>
+                <div className="status-card-title">Request cancelled</div>
+                <div>This booking is no longer active. Search again to request another porter.</div>
                 <div className="status-card-actions">
                   <Link to="/book" className="btn btn-primary btn-sm">
                     Book Another Porter

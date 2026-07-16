@@ -35,7 +35,7 @@ router.post("/request", ...asTraveller, bookingController.createBookingRequest);
  * - maxWeight: Maximum luggage weight (demonstrates $lte)
  * - assignedPorter: Filter by assigned porter ID
  */
-router.get("/", bookingController.getAllBookings);
+router.get("/", requireAuth, bookingController.getAllBookings);
 
 /**
  * GET /bookings/nearest-porters
@@ -53,9 +53,9 @@ router.get("/nearest-porters", bookingController.findNearestPorters);
 
 /**
  * GET /bookings/:id
- * Get a specific booking by ID
+ * Get a specific booking by ID — the owning traveller or assigned porter only
  */
-router.get("/:id", bookingController.getBookingById);
+router.get("/:id", requireAuth, bookingController.getBookingById);
 
 /**
  * POST /bookings/:bookingId/assign-best-porter
@@ -69,6 +69,7 @@ router.get("/:id", bookingController.getBookingById);
  */
 router.post(
   "/:bookingId/assign-best-porter",
+  ...asTraveller,
   bookingController.assignBestPorter,
 );
 
@@ -100,13 +101,19 @@ router.get("/:bookingId/location", ...asTraveller, bookingController.getBookingL
  * POST /bookings/:bookingId/items
  * Add an item to booking (demonstrates $push array operation)
  */
-router.post("/:bookingId/items", bookingController.addItemToBooking);
+router.post("/:bookingId/items", ...asTraveller, bookingController.addItemToBooking);
 
 /**
  * PATCH /bookings/:bookingId/status
  * Update booking status
  * Valid statuses: pending, assigned, in_progress, completed, cancelled
  */
-router.patch("/:bookingId/status", bookingController.updateBookingStatus);
+router.patch("/:bookingId/status", requireAuth, bookingController.updateBookingStatus);
+
+/**
+ * POST /bookings/:bookingId/cancel
+ * Traveller withdraws their own request while it's still awaiting acceptance
+ */
+router.post("/:bookingId/cancel", ...asTraveller, bookingController.cancelBooking);
 
 module.exports = router;
