@@ -15,7 +15,8 @@ function calculateTotals(items) {
 // POST /bookings — creates an unassigned booking; call assign-best-porter or
 // /bookings/request separately to attach a porter.
 exports.createBooking = asyncHandler(async (req, res) => {
-  const { userId, userPhone, station, location, items, specialRequests } = req.body;
+  const { userPhone, station, location, items, specialRequests } = req.body;
+  const userId = req.user.id; // from the traveller's access token, not client input
 
   if (!validateGeoPoint(location)) {
     return res.status(400).json({
@@ -47,8 +48,8 @@ exports.createBooking = asyncHandler(async (req, res) => {
 // POST /bookings/request — creates a booking tied to a specific porter; the
 // porter must accept it before it moves past "requested".
 exports.createBookingRequest = asyncHandler(async (req, res) => {
-  const { userId, userPhone, station, location, items, specialRequests, assignedPorter } =
-    req.body;
+  const { userPhone, station, location, items, specialRequests, assignedPorter } = req.body;
+  const userId = req.user.id; // from the traveller's access token, not client input
 
   if (!assignedPorter) {
     return res.status(400).json({ error: "assignedPorter is required" });
@@ -262,6 +263,9 @@ exports.markBookingAsPaid = asyncHandler(async (req, res) => {
   if (!booking) {
     return res.status(404).json({ error: "Booking not found" });
   }
+  if (booking.userId !== req.user.id) {
+    return res.status(403).json({ error: "This booking does not belong to you" });
+  }
   if (booking.paymentStatus === "paid") {
     return res.json({ message: "Booking already paid", data: booking });
   }
@@ -273,4 +277,29 @@ exports.markBookingAsPaid = asyncHandler(async (req, res) => {
   ).populate("assignedPorter");
 
   res.json({ message: "Payment recorded successfully", data: updatedBooking });
+});
+
+// GET /bookings/:bookingId/location — traveller polls this for their porter's live position
+exports.getBookingLocation = asyncHandler(async (req, res) => {
+  const { bookingId } = req.params;
+
+  const booking = await Booking.findById(bookingId).select("userId currentLocation locationUpdatedAt");
+  if (!booking) {
+    return res.status(404).json({ error: "Booking not found" });
+  }
+  if (booking.userId !== req.user.id) {
+    return res.status(403).json({ error: "This booking does not belong to you" });
+  }
+
+  // An empty array is truthy in JS, and Mongoose materializes the
+  // sub-document shell even when unset — so check length, not just presence.
+  const coords = booking.currentLocation?.coordinates;
+  const hasCoordinates = Array.isArray(coords) && coords.length === 2;
+
+  res.json({
+    data: {
+      coordinates: hasCoordinates ? coords : null,
+      updatedAt: booking.locationUpdatedAt,
+    },
+  });
 });

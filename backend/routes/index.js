@@ -4,7 +4,11 @@ const router = express.Router();
 const porterRoutes = require("./porterRoutes");
 const bookingRoutes = require("./bookingRoutes");
 const stationRoutes = require("./stationRoutes");
+const travellerRoutes = require("./travellerRoutes");
+const authRoutes = require("./authRoutes");
+const journeyRoutes = require("./journeyRoutes");
 const bookingController = require("../controllers/bookingController");
+const { requireAuth, requireRole } = require("../middleware/auth");
 
 router.get("/health", (req, res) => {
   res.json({
@@ -20,9 +24,17 @@ router.use("/bookings", bookingRoutes);
 // Explicit alias kept alongside the router mount above: guarantees the
 // porter-request flow still resolves even if the bookingRoutes mount above
 // is ever replaced or cached during a restart.
-router.post("/bookings/request", bookingController.createBookingRequest);
+router.post(
+  "/bookings/request",
+  requireAuth,
+  requireRole("traveller"),
+  bookingController.createBookingRequest,
+);
 
 router.use("/stations", stationRoutes);
+router.use("/travellers", travellerRoutes);
+router.use("/auth", authRoutes);
+router.use("/journey", journeyRoutes);
 
 // API reference
 router.get("/", (req, res) => {
@@ -46,6 +58,7 @@ router.get("/", (req, res) => {
           "POST /api/porters/:id/bookings/:bookingId/accept": "Accept booking request",
           "POST /api/porters/:id/bookings/:bookingId/decline": "Decline booking request",
           "POST /api/porters/:id/bookings/:bookingId/complete": "Complete booking",
+          "PATCH /api/porters/:id/bookings/:bookingId/location": "Push live location while a job is active",
         },
         bookings: {
           "POST /api/bookings": "Create new booking",
@@ -54,12 +67,28 @@ router.get("/", (req, res) => {
           "GET /api/bookings/:id": "Get booking by ID",
           "GET /api/bookings/nearest-porters": "Find nearest porters (geospatial)",
           "POST /api/bookings/:bookingId/assign-best-porter": "Assign best porter (aggregation)",
-          "POST /api/bookings/:bookingId/payment": "Mark booking as paid",
+          "POST /api/bookings/:bookingId/payment": "Mark booking as paid (Cash on Service only)",
+          "POST /api/bookings/:bookingId/create-order": "Create a Razorpay order for online payment",
+          "POST /api/bookings/:bookingId/verify-payment": "Verify a Razorpay payment signature",
+          "GET /api/bookings/:bookingId/location": "Poll assigned porter's live location",
           "POST /api/bookings/:bookingId/items": "Add item to booking",
           "PATCH /api/bookings/:bookingId/status": "Update booking status",
         },
         stations: {
           "GET /api/stations": "List stations for dropdowns",
+        },
+        travellers: {
+          "POST /api/travellers/register": "Register a traveller account",
+          "POST /api/travellers/login": "Login as a traveller",
+        },
+        auth: {
+          "POST /api/auth/refresh": "Exchange a valid refresh cookie for a new access token",
+          "POST /api/auth/logout": "Revoke the current refresh token",
+        },
+        journey: {
+          "POST /api/journey/pnr": "Look up journey details from a PNR (RailKit, cached, quota-limited)",
+          "POST /api/journey/train-status": "Look up live running status / ETA for a train (RailKit, cached, quota-limited)",
+          "POST /api/journey/geocode-station": "Resolve any station name to coordinates (Nominatim, cached permanently)",
         },
       },
       mongoDB_features: {

@@ -7,18 +7,22 @@
 const express = require("express");
 const router = express.Router();
 const bookingController = require("../controllers/bookingController");
+const paymentController = require("../controllers/paymentController");
+const { requireAuth, requireRole } = require("../middleware/auth");
+
+const asTraveller = [requireAuth, requireRole("traveller")];
 
 /**
  * POST /bookings
  * Create a new booking request
  */
-router.post("/", bookingController.createBooking);
+router.post("/", ...asTraveller, bookingController.createBooking);
 
 /**
  * POST /bookings/request
  * Create a booking request for a specific porter
  */
-router.post("/request", bookingController.createBookingRequest);
+router.post("/request", ...asTraveller, bookingController.createBookingRequest);
 
 /**
  * GET /bookings
@@ -70,9 +74,27 @@ router.post(
 
 /**
  * POST /bookings/:bookingId/payment
- * Mark a booking as paid after the user completes payment
+ * Mark a booking as paid — Cash on Service only (nothing to verify electronically)
  */
-router.post("/:bookingId/payment", bookingController.markBookingAsPaid);
+router.post("/:bookingId/payment", ...asTraveller, bookingController.markBookingAsPaid);
+
+/**
+ * POST /bookings/:bookingId/create-order
+ * Create a Razorpay order for online payment (amount computed server-side)
+ */
+router.post("/:bookingId/create-order", ...asTraveller, paymentController.createOrder);
+
+/**
+ * POST /bookings/:bookingId/verify-payment
+ * Verify a Razorpay payment signature and mark the booking paid
+ */
+router.post("/:bookingId/verify-payment", ...asTraveller, paymentController.verifyPayment);
+
+/**
+ * GET /bookings/:bookingId/location
+ * Poll the assigned porter's live position for this booking
+ */
+router.get("/:bookingId/location", ...asTraveller, bookingController.getBookingLocation);
 
 /**
  * POST /bookings/:bookingId/items

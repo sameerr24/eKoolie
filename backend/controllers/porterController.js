@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const Booking = require("../models/Booking");
 const Porter = require("../models/Porter");
 const asyncHandler = require("../middleware/asyncHandler");
+const { issueTokenPair } = require("../services/tokenService");
 
 // POST /porters — register a new porter (hashes password before storing)
 exports.addPorter = asyncHandler(async (req, res) => {
@@ -31,7 +32,9 @@ exports.addPorter = asyncHandler(async (req, res) => {
     passwordHash,
   }).save();
 
-  res.status(201).json({ message: "Porter added successfully", data: savedPorter });
+  const accessToken = await issueTokenPair(res, { id: savedPorter._id.toString(), role: "porter" });
+
+  res.status(201).json({ message: "Porter added successfully", accessToken, data: savedPorter });
 });
 
 // GET /porters?station=&isAvailable=&minRating= — list porters with optional filters
@@ -164,8 +167,11 @@ exports.loginPorter = asyncHandler(async (req, res) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 
+  const accessToken = await issueTokenPair(res, { id: porter._id.toString(), role: "porter" });
+
   res.json({
     message: "Login successful",
+    accessToken,
     data: {
       id: porter._id,
       name: porter.name,
@@ -236,18 +242,15 @@ exports.declineBooking = asyncHandler(async (req, res) => {
   res.json({ message: "Booking declined", data: updatedBooking });
 });
 
-// POST /porters/:id/bookings/:bookingId/complete — requires payment to be settled first
+// POST /porters/:id/bookings/:bookingId/complete — payment can happen before
+// or after completion (traveller's "Pay Now"/"Pay Later" choice), so this
+// does not gate on paymentStatus.
 exports.completeBooking = asyncHandler(async (req, res) => {
   const { id, bookingId } = req.params;
 
   const booking = await Booking.findOne({ _id: bookingId, assignedPorter: id });
   if (!booking) {
     return res.status(404).json({ error: "Booking not found" });
-  }
-  if (booking.paymentStatus !== "paid") {
-    return res.status(400).json({
-      error: "Payment must be completed before marking the booking completed",
-    });
   }
   if (!["assigned", "in_progress"].includes(booking.status)) {
     return res.status(400).json({ error: "Booking must be assigned or in progress" });
@@ -267,4 +270,33 @@ exports.completeBooking = asyncHandler(async (req, res) => {
   });
 
   res.json({ message: "Booking completed", data: updatedBooking });
+});
+
+// PATCH /porters/:id/bookings/:bookingId/location — porter pushes their live position while a job is active
+exports.updateBookingLocation = asyncHandler(async (req, res) => {
+  const { id, bookingId } = req.params;
+  const { latitude, longitude } = req.body;
+
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    return res.status(400).json({ error: "latitude and longitude (numbers) are required" });
+  }
+
+  const booking = await Booking.findOne({ _id: bookingId, assignedPorter: id });
+  if (!booking) {
+    return res.status(404).json({ error: "Booking not found" });
+  }
+  if (!["assigned", "in_progress"].includes(booking.status)) {
+    return res.status(400).json({ error: "Booking must be assigned or in progress to share location" });
+  }
+
+  const updatedBooking = await Booking.findByIdAndUpdate(
+    bookingId,
+    {
+      currentLocation: { type: "Point", coordinates: [longitude, latitude] },
+      locationUpdatedAt: new Date(),
+    },
+    { new: true },
+  );
+
+  res.json({ message: "Location updated", data: { updatedAt: updatedBooking.locationUpdatedAt } });
 });

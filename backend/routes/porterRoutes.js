@@ -1,99 +1,26 @@
-/**
- * PORTER ROUTES
- *
- * All endpoints related to porter management
- */
-
 const express = require("express");
 const router = express.Router();
 const porterController = require("../controllers/porterController");
+const { requireAuth, requireRole, requireSelf } = require("../middleware/auth");
 
-/**
- * POST /porters
- * Add a new porter to the system
- */
+const asPorterSelf = [requireAuth, requireRole("porter"), requireSelf("id")];
+
+// Public: registration, login, and directory listings for the booking search flow
 router.post("/", porterController.addPorter);
-
-/**
- * POST /porters/login
- * Login porter with username/password
- */
 router.post("/login", porterController.loginPorter);
-
-/**
- * GET /porters
- * Get all porters with optional filtering
- * Query parameters:
- * - station: Filter by station
- * - isAvailable: Filter by availability (true/false)
- * - minRating: Minimum rating (demonstrates $gte)
- */
 router.get("/", porterController.getAllPorters);
-
-/**
- * POST /porters/:id/skills
- * Add a skill to a porter (demonstrates $addToSet)
- */
-router.post("/:id/skills", porterController.addSkill);
-
-/**
- * GET /porters/:id
- * Get a specific porter by ID
- */
+router.get("/filter/by-skill", porterController.getPortersBySkill);
 router.get("/:id", porterController.getPorterById);
 
-/**
- * DELETE /porters/:id/skills
- * Remove a skill from a porter (demonstrates $pull)
- */
-router.delete("/:id/skills", porterController.removeSkill);
-
-/**
- * PATCH /porters/:id/availability
- * Update porter availability status
- */
-router.patch("/:id/availability", porterController.updateAvailability);
-
-/**
- * GET /porters/skill/:skill
- * Get all porters with a specific skill (demonstrates $in operator)
- */
-router.get("/filter/by-skill", porterController.getPortersBySkill);
-
-/**
- * PATCH /porters/:id/stats
- * Update porter statistics (demonstrates $inc)
- */
-router.patch("/:id/stats", porterController.updatePorterStats);
-
-/**
- * GET /porters/:id/bookings
- * Get porter bookings (optionally filtered by status)
- */
-router.get("/:id/bookings", porterController.getPorterBookings);
-
-/**
- * POST /porters/:id/bookings/:bookingId/accept
- * Accept a booking request
- */
-router.post("/:id/bookings/:bookingId/accept", porterController.acceptBooking);
-
-/**
- * POST /porters/:id/bookings/:bookingId/decline
- * Decline a booking request
- */
-router.post(
-  "/:id/bookings/:bookingId/decline",
-  porterController.declineBooking,
-);
-
-/**
- * POST /porters/:id/bookings/:bookingId/complete
- * Complete an accepted booking
- */
-router.post(
-  "/:id/bookings/:bookingId/complete",
-  porterController.completeBooking,
-);
+// Below: the authenticated porter may only act on their own account/bookings
+router.post("/:id/skills", ...asPorterSelf, porterController.addSkill);
+router.delete("/:id/skills", ...asPorterSelf, porterController.removeSkill);
+router.patch("/:id/availability", ...asPorterSelf, porterController.updateAvailability);
+router.patch("/:id/stats", ...asPorterSelf, porterController.updatePorterStats);
+router.get("/:id/bookings", ...asPorterSelf, porterController.getPorterBookings);
+router.post("/:id/bookings/:bookingId/accept", ...asPorterSelf, porterController.acceptBooking);
+router.post("/:id/bookings/:bookingId/decline", ...asPorterSelf, porterController.declineBooking);
+router.post("/:id/bookings/:bookingId/complete", ...asPorterSelf, porterController.completeBooking);
+router.patch("/:id/bookings/:bookingId/location", ...asPorterSelf, porterController.updateBookingLocation);
 
 module.exports = router;

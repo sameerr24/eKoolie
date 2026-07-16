@@ -51,8 +51,26 @@ const bookingSchema = new mongoose.Schema(
     estimatedFare: { type: Number, required: true },
     actualFare: { type: Number, default: null },
 
+    // Razorpay order/payment IDs — audit trail for support/debugging, only
+    // ever set after server-side signature verification (paymentController.js)
+    paymentOrderId: { type: String, default: null },
+    paymentId: { type: String, default: null },
+
     specialRequests: { type: String, default: "" },
     rating: { type: Number, min: 1, max: 5, default: null },
+
+    // Live in-transit position while a job is active — distinct from the
+    // porter's static Porter.location (their registered profile location).
+    currentLocation: {
+      type: {
+        type: String,
+        enum: ["Point"],
+      },
+      coordinates: {
+        type: [Number],
+      },
+    },
+    locationUpdatedAt: { type: Date, default: null },
   },
   { timestamps: true },
 );

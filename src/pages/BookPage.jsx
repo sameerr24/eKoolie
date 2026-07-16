@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "../components/layout/Navbar";
+import { getAccessToken } from "../api/client";
+import { logout as logoutRequest } from "../api/auth";
 import { getStations } from "../api/stations";
 import { findNearestPorters, requestBooking, getBooking } from "../api/bookings";
+import { lookupPnr, lookupTrainStatus, geocodeStation } from "../api/journey";
 import "./BookPage.css";
 
 const FALLBACK_STATIONS = [
@@ -67,6 +70,9 @@ export function BookPage() {
     time: "",
   });
   const [stationOptions, setStationOptions] = useState([]);
+  const [pnr, setPnr] = useState("");
+  const [isFetchingJourney, setIsFetchingJourney] = useState(false);
+  const [journeyStatus, setJourneyStatus] = useState({ text: "", isError: false });
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [resultHeading, setResultHeading] = useState({
@@ -75,13 +81,10 @@ export function BookPage() {
   });
   const [searchStatus, setSearchStatus] = useState({ text: "", isError: false });
   const [porters, setPorters] = useState([]);
-  const [statusCard, setStatusCard] = useState(null); // { title, subtitle, status, body, action }
+  const [showActiveBookingBanner, setShowActiveBookingBanner] = useState(false);
 
   const stationCoordsRef = useRef({});
   const bookingDraftRef = useRef(null);
-  const activeBookingIdRef = useRef(null);
-  const paymentRedirectedRef = useRef(null);
-  const pollTimerRef = useRef(null);
   const resultRef = useRef(null);
 
   const username = localStorage.getItem("username");
@@ -99,79 +102,14 @@ export function BookPage() {
     if (!booking) return;
     localStorage.setItem("latestBookingRequest", JSON.stringify(booking));
     localStorage.setItem("selectedBooking", JSON.stringify(booking));
-    activeBookingIdRef.current = booking._id || activeBookingIdRef.current;
   };
 
-  const pollBookingStatus = useCallback(async () => {
-    const bookingId = activeBookingIdRef.current || readJSON("latestBookingRequest")?._id;
-    if (!bookingId) return;
-
-    try {
-      const payload = await getBooking(bookingId);
-      const booking = payload.data;
-      if (!booking) return;
-
-      saveCurrentBooking(booking);
-
-      if (booking.status === "requested") {
-        setStatusCard({
-          title: "Waiting for porter to accept",
-          subtitle: "Your request is live. We will keep checking for the porter response.",
-          status: `Booking ID: ${booking._id}`,
-          body: "This is a live request. Keep this page open or switch back to it and press Check Status if needed.",
-          action: "waiting",
-        });
-        return;
-      }
-
-      if (booking.status === "assigned" && booking.paymentStatus !== "paid") {
-        const porterName = booking.assignedPorter?.name || "your porter";
-        setStatusCard({
-          title: "Porter accepted your request",
-          subtitle: "Payment is now required before the porter can complete the booking.",
-          status: `${porterName} has accepted booking ID: ${booking._id}`,
-          body: "Proceed to payment now. Once payment is recorded, the porter can finish the job from their dashboard.",
-          action: "payment",
-        });
-
-        if (paymentRedirectedRef.current !== booking._id) {
-          paymentRedirectedRef.current = booking._id;
-          localStorage.setItem("selectedBooking", JSON.stringify(booking));
-          navigate("/payment");
-        }
-        return;
-      }
-
-      if (booking.paymentStatus === "paid") {
-        const porterName = booking.assignedPorter?.name || "your porter";
-        setStatusCard({
-          title: "Payment successful",
-          subtitle: "The porter has been notified and can complete the booking now.",
-          status: `${porterName} is finishing the job.`,
-          body: `Payment recorded for booking ID: ${booking._id}. The porter may now mark the booking complete after service.`,
-          action: null,
-        });
-        return;
-      }
-
-      paymentRedirectedRef.current = null;
-    } catch (error) {
-      console.warn("Booking status poll failed:", error);
-    }
-  }, [navigate]);
-
-  const startPollingBooking = useCallback(
-    (booking) => {
-      if (!booking) return;
-      activeBookingIdRef.current = booking._id;
-      if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
-      pollTimerRef.current = window.setInterval(pollBookingStatus, 4000);
-      void pollBookingStatus();
-    },
-    [pollBookingStatus],
-  );
-
   useEffect(() => {
+    if (!getAccessToken()) {
+      navigate("/login");
+      return;
+    }
+
     (async () => {
       try {
         const payload = await getStations();
@@ -194,25 +132,130 @@ export function BookPage() {
 
     const persisted = readJSON("latestBookingRequest");
     if (persisted?._id) {
-      startPollingBooking(persisted);
+      // One-time freshness check, not a poll — this page no longer tracks an
+      // active booking's live status, /tracking does. Falls back to the
+      // cached status if the fetch itself fails.
+      (async () => {
+        try {
+          const payload = await getBooking(persisted._id);
+          const fresh = payload.data;
+          if (fresh) {
+            saveCurrentBooking(fresh);
+            setShowActiveBookingBanner(!["completed", "cancelled"].includes(fresh.status));
+          }
+        } catch {
+          setShowActiveBookingBanner(!["completed", "cancelled"].includes(persisted.status));
+        }
+      })();
     }
-
-    const onWindowFocus = () => void pollBookingStatus();
-    const onVisibilityChange = () => {
-      if (!document.hidden) void pollBookingStatus();
-    };
-    window.addEventListener("focus", onWindowFocus);
-    document.addEventListener("visibilitychange", onVisibilityChange);
-
-    return () => {
-      if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
-      window.removeEventListener("focus", onWindowFocus);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateField = (field) => (event) => setForm((f) => ({ ...f, [field]: event.target.value }));
+
+  // Autofill convenience only: every field it touches stays editable, and
+  // any failure (bad PNR, quota exhausted, network error) just leaves the
+  // form exactly as usable as manual entry always was.
+  const handleFetchJourney = async () => {
+    const pnrValue = pnr.trim();
+    if (!/^\d{10}$/.test(pnrValue)) {
+      setJourneyStatus({ text: "Enter a valid 10-digit PNR.", isError: true });
+      return;
+    }
+
+    setIsFetchingJourney(true);
+    setJourneyStatus({ text: "Fetching journey details...", isError: false });
+
+    try {
+      const pnrPayload = await lookupPnr(pnrValue);
+      const journey = pnrPayload.data;
+
+      const matchedStation = stationOptions.find(
+        (s) => s.name.trim().toLowerCase() === (journey.destinationStation || "").trim().toLowerCase(),
+      );
+
+      // Not one of our 10 seeded stations by name — try to place it on the
+      // map anyway via geocoding. This resolves coordinates for the search,
+      // it does not guarantee any porter actually exists near there.
+      let geocodedStation = null;
+      if (!matchedStation && journey.destinationStation) {
+        try {
+          const geoPayload = await geocodeStation(journey.destinationStation);
+          const { lat, lon } = geoPayload.data;
+          stationCoordsRef.current[journey.destinationStation] = [lon, lat];
+          setStationOptions((current) =>
+            current.some((s) => s.name.toLowerCase() === journey.destinationStation.toLowerCase())
+              ? current
+              : [...current, { name: journey.destinationStation, city: "via map lookup" }],
+          );
+          geocodedStation = { name: journey.destinationStation };
+        } catch {
+          // fall through — status message below covers this case
+        }
+      }
+
+      setForm((f) => {
+        const next = { ...f, train_number: journey.trainNumber || f.train_number };
+        if (journey.coachSeat) {
+          const [coachPart, seatPart] = journey.coachSeat.split("/").map((part) => part.trim());
+          next.coach = coachPart || f.coach;
+          next.seat_number = seatPart || f.seat_number;
+        }
+        if (matchedStation) {
+          next.station = matchedStation.name;
+        } else if (geocodedStation) {
+          next.station = geocodedStation.name;
+        }
+        return next;
+      });
+
+      let statusMessage = `${journey.trainName || "Train"} — journey details loaded.`;
+      if (!journey.chartPrepared && !journey.coachSeat) {
+        statusMessage +=
+          " Seat chart isn't prepared yet, so coach/seat aren't assigned — fill those in manually once available.";
+      } else if (!journey.chartPrepared) {
+        statusMessage += " Seat chart isn't finalized yet, so coach/seat may still change closer to departure.";
+      }
+      if (!matchedStation && geocodedStation) {
+        statusMessage += ` Located "${journey.destinationStation}" on the map — we may not have a porter registered there yet, so the search below could come back empty.`;
+      } else if (!matchedStation) {
+        statusMessage += ` Couldn't locate "${journey.destinationStation}" on the map either — please pick a station manually.`;
+      }
+
+      if (journey.trainNumber && journey.journeyDate) {
+        try {
+          const statusPayload = await lookupTrainStatus(
+            journey.trainNumber,
+            journey.journeyDate,
+            journey.destinationStation,
+            journey.destinationStationCode,
+          );
+          const eta = statusPayload.data.expectedArrivalAtDestination;
+          if (eta) {
+            const etaDate = new Date(eta);
+            const hh = String(etaDate.getHours()).padStart(2, "0");
+            const mm = String(etaDate.getMinutes()).padStart(2, "0");
+            setForm((f) => ({ ...f, time: `${hh}:${mm}` }));
+            const delay = statusPayload.data.delayMinutes;
+            statusMessage += ` Expected arrival ~${hh}:${mm}${
+              typeof delay === "number" ? ` (running ${delay > 0 ? `${delay} min late` : "on time"})` : ""
+            }.`;
+          }
+        } catch {
+          statusMessage += " Couldn't fetch live running status, so the arrival time is left for you to set.";
+        }
+      }
+
+      setJourneyStatus({ text: statusMessage, isError: false });
+    } catch (error) {
+      setJourneyStatus({
+        text: error.message || "Couldn't fetch journey details. You can still fill in the form manually.",
+        isError: true,
+      });
+    } finally {
+      setIsFetchingJourney(false);
+    }
+  };
 
   const handleSearch = async (event) => {
     event.preventDefault();
@@ -246,7 +289,6 @@ export function BookPage() {
       }
 
       bookingDraftRef.current = {
-        userId: username || "guest-user",
         userPhone: phoneValue,
         station: stationValue,
         location: { type: "Point", coordinates: originCoordinates },
@@ -311,38 +353,20 @@ export function BookPage() {
       });
 
       saveCurrentBooking(payload.data);
-      setSearchStatus({
-        text: `Request sent to ${porter.name}. Wait for them to accept in their dashboard.`,
-        isError: false,
-      });
-      setStatusCard({
-        title: "Waiting for porter to accept",
-        subtitle: "Your request is live. We will keep checking for the porter response.",
-        status: `Booking ID: ${payload.data._id}`,
-        body: "This is a live request. Keep this page open or switch back to it and press Check Status if needed.",
-        action: "waiting",
-      });
-      startPollingBooking(payload.data);
+      navigate("/tracking");
     } catch (error) {
       setSearchStatus({ text: error.message || "Unable to send booking request.", isError: true });
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
+      await logoutRequest().catch(() => {});
       localStorage.removeItem("username");
       localStorage.removeItem("latestBookingRequest");
       localStorage.removeItem("selectedBooking");
       navigate("/home");
     }
-  };
-
-  const goToPayment = () => {
-    const current = readJSON("latestBookingRequest");
-    if (current?._id) {
-      localStorage.setItem("selectedBooking", JSON.stringify(current));
-    }
-    navigate("/payment");
   };
 
   return (
@@ -361,8 +385,49 @@ export function BookPage() {
       <main className="page-main container book-main">
         {username && <div className="user-greeting">Hello {username}</div>}
 
+        {showActiveBookingBanner && (
+          <div className="active-booking-banner">
+            <span>You have an active booking request.</span>
+            <Link to="/tracking" className="btn btn-outline btn-sm">
+              View Tracking
+            </Link>
+          </div>
+        )}
+
         <div className="card book-form-card">
           <h1 style={{ marginBottom: 24, fontSize: 28 }}>Book a Porter</h1>
+
+          <div className="field pnr-lookup">
+            <label className="field-label">Have a PNR? Fetch your journey details</label>
+            <div className="pnr-lookup-row">
+              <input
+                className="input"
+                placeholder="10-digit PNR"
+                maxLength={10}
+                value={pnr}
+                onChange={(event) => setPnr(event.target.value.replace(/\D/g, ""))}
+              />
+              <button
+                type="button"
+                className="btn btn-outline"
+                disabled={isFetchingJourney}
+                onClick={handleFetchJourney}
+              >
+                {isFetchingJourney ? "Fetching..." : "Fetch Journey Details"}
+              </button>
+            </div>
+            {journeyStatus.text && (
+              <div
+                className="field-hint"
+                style={{ color: journeyStatus.isError ? "#fca5a5" : "var(--text-muted)" }}
+              >
+                {journeyStatus.text}
+              </div>
+            )}
+            <div className="field-hint">
+              Optional — this only pre-fills the fields below, all of which you can still edit.
+            </div>
+          </div>
 
           <form onSubmit={handleSearch} noValidate>
             <div className="field">
@@ -432,33 +497,8 @@ export function BookPage() {
               </div>
             )}
 
-            {statusCard && (
-              <div className="status-card">
-                <div className="status-card-title">{statusCard.title}</div>
-                <div>{statusCard.body}</div>
-                <div className="status-card-meta">{statusCard.status}</div>
-                {statusCard.action === "waiting" && (
-                  <div className="status-card-actions">
-                    <button type="button" className="btn btn-primary btn-sm" onClick={() => void pollBookingStatus()}>
-                      Check Status
-                    </button>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setStatusCard(null)}>
-                      Hide
-                    </button>
-                  </div>
-                )}
-                {statusCard.action === "payment" && (
-                  <div className="status-card-actions">
-                    <button type="button" className="btn btn-primary btn-sm" onClick={goToPayment}>
-                      Proceed to Payment
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="porter-list">
-              {porters.length === 0 && !statusCard && (
+              {porters.length === 0 && (
                 <div className="porter-empty">
                   No live match found in Atlas for this search. If you typed a non-demo station, try one of the
                   seeded stations or allow location access.

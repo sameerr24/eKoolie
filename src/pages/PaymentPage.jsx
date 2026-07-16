@@ -2,9 +2,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "../components/layout/Navbar";
 import { payForBooking } from "../api/bookings";
+import { createOrder, verifyPayment } from "../api/payments";
+import { loadRazorpayScript } from "../utils/loadRazorpayScript";
 import "./PaymentPage.css";
 
-const PAYMENT_METHODS = ["UPI / QR Code", "Credit / Debit Card", "Cash on Service"];
+const PAY_ONLINE = "Pay Online (UPI / Card / Netbanking)";
+const CASH_ON_SERVICE = "Cash on Service";
+const PAYMENT_METHODS = [PAY_ONLINE, CASH_ON_SERVICE];
 const PLATFORM_FEE = 20;
 
 function readJSON(key) {
@@ -29,6 +33,59 @@ export function PaymentPage() {
   const bookingFare = bookingRecord?.estimatedFare;
   const totalAmount = (bookingFare ?? porterFare) + PLATFORM_FEE;
 
+  const finalizeSuccess = (updatedBooking, message) => {
+    localStorage.setItem("latestBookingRequest", JSON.stringify(updatedBooking));
+    localStorage.setItem("selectedBooking", JSON.stringify(updatedBooking));
+    window.alert(message);
+    localStorage.removeItem("selectedPorter");
+    navigate("/tracking");
+  };
+
+  const payWithCash = async (bookingId) => {
+    const payload = await payForBooking(bookingId, { paymentMethod: CASH_ON_SERVICE, amount: totalAmount });
+    finalizeSuccess(payload.data, "Recorded — pay the porter in cash once the job is done.");
+  };
+
+  // Card/UPI details are entered inside Razorpay's own hosted popup and never
+  // touch our server. The `handler` callback below is not itself trusted as
+  // proof of payment — verifyPayment() re-checks the signature server-side.
+  const payOnline = async (bookingId) => {
+    await loadRazorpayScript();
+    const orderPayload = await createOrder(bookingId);
+    const { orderId, amount, currency, keyId } = orderPayload.data;
+
+    return new Promise((resolve, reject) => {
+      const razorpay = new window.Razorpay({
+        key: keyId,
+        order_id: orderId,
+        amount,
+        currency,
+        name: "eKoolie",
+        description: "Porter service payment",
+        handler: async (response) => {
+          try {
+            const verifyPayload = await verifyPayment(bookingId, response);
+            finalizeSuccess(
+              verifyPayload.data,
+              "Payment successful. The porter can now complete the booking from their dashboard.",
+            );
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        },
+        modal: {
+          ondismiss: () => resolve(),
+        },
+        theme: { color: "#b91c1c" },
+      });
+      razorpay.on("payment.failed", (response) => {
+        reject(new Error(response.error?.description || "Payment failed."));
+      });
+      razorpay.open();
+    });
+  };
+
   const handlePay = async () => {
     const bookingId = bookingRecord?._id;
     if (!bookingId) {
@@ -38,12 +95,11 @@ export function PaymentPage() {
 
     setIsPaying(true);
     try {
-      const payload = await payForBooking(bookingId, { paymentMethod: selectedMethod, amount: totalAmount });
-      localStorage.setItem("latestBookingRequest", JSON.stringify(payload.data));
-      localStorage.setItem("selectedBooking", JSON.stringify(payload.data));
-      window.alert("Payment successful. The porter can now complete the booking from their dashboard.");
-      localStorage.removeItem("selectedPorter");
-      navigate("/book");
+      if (selectedMethod === CASH_ON_SERVICE) {
+        await payWithCash(bookingId);
+      } else {
+        await payOnline(bookingId);
+      }
     } catch (error) {
       window.alert(error.message || "Payment failed.");
     } finally {
