@@ -20,12 +20,23 @@ function getClient() {
 // amountRupees is a plain rupee amount computed server-side by the caller —
 // Razorpay's API takes the smallest currency unit (paise).
 async function createOrder(amountRupees, receipt) {
-  const order = await getClient().orders.create({
-    amount: Math.round(amountRupees * 100),
-    currency: "INR",
-    receipt,
-  });
-  return order;
+  try {
+    const order = await getClient().orders.create({
+      amount: Math.round(amountRupees * 100),
+      currency: "INR",
+      receipt,
+    });
+    return order;
+  } catch (err) {
+    // The SDK throws Razorpay's raw { statusCode, error: { description } }
+    // shape, not an Error instance — err.message is otherwise undefined and
+    // the real reason (e.g. "Authentication failed") gets lost as a blank
+    // "Server error" by the time it reaches errorHandler.js.
+    const description = err?.error?.description || err?.message || "Razorpay order creation failed";
+    const wrapped = new Error(description);
+    wrapped.status = err?.statusCode && err.statusCode < 500 ? 502 : 500;
+    throw wrapped;
+  }
 }
 
 // Razorpay's documented Standard Checkout verification: HMAC-SHA256 of
