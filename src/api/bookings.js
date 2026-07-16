@@ -15,3 +15,5 @@ export const payForBooking = (bookingId, { paymentMethod, amount }) =>
     method: "POST",
     body: { paymentMethod, amount },
   });
+
+export const getBookingLocation = (bookingId) => apiRequest(`/bookings/${bookingId}/location`);

@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navbar } from "../components/layout/Navbar";
-import { getPorter, getPorterBookings, acceptBooking, declineBooking, completeBooking } from "../api/porters";
+import { getAccessToken } from "../api/client";
+import { logout as logoutRequest } from "../api/auth";
+import {
+  getPorter,
+  getPorterBookings,
+  acceptBooking,
+  declineBooking,
+  completeBooking,
+  updateBookingLocation,
+} from "../api/porters";
 import "./PorterDashboardPage.css";
 
 const DEFAULT_HINT = "Requests assigned to you will appear here.";
@@ -17,6 +26,9 @@ export function PorterDashboardPage() {
 
   const lastRequestIdsRef = useRef([]);
   const requestsListRef = useRef(null);
+  const [isSharingLocation, setIsSharingLocation] = useState(false);
+  const watchIdRef = useRef(null);
+  const lastSentAtRef = useRef(0);
 
   const porterId = localStorage.getItem("porterId");
   const porterNameFallback = localStorage.getItem("porterName");
@@ -52,7 +64,7 @@ export function PorterDashboardPage() {
   }, [porterId]);
 
   useEffect(() => {
-    if (!porterId) {
+    if (!porterId || !getAccessToken()) {
       window.alert("Please login as a porter first.");
       navigate("/login");
       return undefined;
@@ -76,14 +88,69 @@ export function PorterDashboardPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
+      await logoutRequest().catch(() => {});
       localStorage.removeItem("porterId");
       localStorage.removeItem("porterName");
       localStorage.removeItem("porterUsername");
       navigate("/login");
     }
   };
+
+  const stopSharingLocation = () => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    setIsSharingLocation(false);
+  };
+
+  const toggleLocationSharing = () => {
+    if (isSharingLocation) {
+      stopSharingLocation();
+      return;
+    }
+
+    const activeBookingId = activeBookings[0]?._id;
+    if (!navigator.geolocation || !porterId || !activeBookingId) return;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const now = Date.now();
+        if (now - lastSentAtRef.current < 10000) return; // throttle real pushes to ~10s apart
+        lastSentAtRef.current = now;
+        updateBookingLocation(
+          porterId,
+          activeBookingId,
+          position.coords.latitude,
+          position.coords.longitude,
+        ).catch((error) => console.warn("Failed to push location:", error));
+      },
+      (error) => {
+        window.alert(error.message || "Unable to get your location.");
+        stopSharingLocation();
+      },
+      { enableHighAccuracy: true, maximumAge: 0 },
+    );
+    setIsSharingLocation(true);
+  };
+
+  // Stop sharing if the active job disappears (completed/declined elsewhere) or on unmount
+  useEffect(() => {
+    if (activeBookings.length === 0 && watchIdRef.current !== null) {
+      stopSharingLocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBookings]);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
 
   if (!porterId) {
     return null;
@@ -152,13 +219,22 @@ export function PorterDashboardPage() {
             <div style={{ fontSize: 13, color: "var(--text-muted-2)", marginBottom: 16 }}>
               Payment status: {activeBooking.paymentStatus}
             </div>
-            <button
-              className="btn btn-primary btn-sm"
-              disabled={busyAction === activeBooking._id}
-              onClick={() => runAction(completeBooking, activeBooking._id, "Unable to complete booking.")}
-            >
-              Mark as Completed
-            </button>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={busyAction === activeBooking._id}
+                onClick={() => runAction(completeBooking, activeBooking._id, "Unable to complete booking.")}
+              >
+                Mark as Completed
+              </button>
+              <button
+                type="button"
+                className={`btn btn-sm ${isSharingLocation ? "btn-primary" : "btn-outline"}`}
+                onClick={toggleLocationSharing}
+              >
+                {isSharingLocation ? "● Sharing location" : "Share my location"}
+              </button>
+            </div>
           </div>
         )}
 
@@ -178,7 +254,7 @@ export function PorterDashboardPage() {
               <div className="card request-card" key={booking._id}>
                 <div style={{ fontWeight: 700, marginBottom: 6 }}>{booking.station}</div>
                 <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 4 }}>
-                  {booking.userId} • {booking.userPhone}
+                  Contact: {booking.userPhone}
                 </div>
                 <div style={{ fontSize: 13.5, color: "var(--text-muted)", marginBottom: 10 }}>
                   Fare: ₹{booking.estimatedFare}

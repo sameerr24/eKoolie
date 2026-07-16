@@ -1,0 +1,19 @@
+.porter-map {
+  width: 100%;
+  height: 260px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-top: 14px;
+}
+
+.porter-map-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  background: var(--bg-elevated-2);
+  border: 1px dashed var(--border-strong);
+}
