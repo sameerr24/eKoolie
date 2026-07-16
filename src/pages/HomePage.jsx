@@ -1,8 +1,19 @@
 import { useCallback, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "../components/layout/Navbar";
 import { useScrollReveal } from "../hooks/useScrollReveal";
+import { getAccessToken } from "../api/client";
+import { logout as logoutRequest } from "../api/auth";
 import "./HomePage.css";
+
+function readSession() {
+  if (!getAccessToken()) return null;
+  const porterId = localStorage.getItem("porterId");
+  if (porterId) return { role: "porter", name: localStorage.getItem("porterName") || "Porter" };
+  const username = localStorage.getItem("username");
+  if (username) return { role: "traveller", name: username };
+  return null;
+}
 
 const NAV_LINKS = [
   { href: "#home", label: "Home" },
@@ -91,6 +102,18 @@ export function HomePage() {
   const [activity, setActivity] = useState(INITIAL_ACTIVITY);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewText, setReviewText] = useState("");
+  const [session, setSession] = useState(readSession);
+
+  const handleLogout = async () => {
+    if (window.confirm("Are you sure you want to logout?")) {
+      await logoutRequest().catch(() => {});
+      localStorage.removeItem("username");
+      localStorage.removeItem("porterId");
+      localStorage.removeItem("porterName");
+      localStorage.removeItem("porterUsername");
+      setSession(null);
+    }
+  };
 
   const handleNavClick = useCallback((event, link) => {
     event.preventDefault();
@@ -151,14 +174,28 @@ export function HomePage() {
           activeHref={activeHref}
           onLinkClick={handleNavClick}
           actions={
-            <>
-              <a href="/login" className="btn btn-outline btn-on-hero">
-                Login
-              </a>
-              <a href="/login" className="btn btn-primary">
-                Sign Up
-              </a>
-            </>
+            session ? (
+              <>
+                <button className="btn btn-outline btn-on-hero" onClick={handleLogout}>
+                  Logout
+                </button>
+                <Link
+                  to={session.role === "porter" ? "/porter-dashboard" : "/book"}
+                  className="btn btn-primary"
+                >
+                  {session.role === "porter" ? "Dashboard" : "Book a Koolie"}
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn btn-outline btn-on-hero">
+                  Login
+                </Link>
+                <Link to="/login" className="btn btn-primary">
+                  Sign Up
+                </Link>
+              </>
+            )
           }
         />
 

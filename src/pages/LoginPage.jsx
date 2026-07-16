@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loginPorter } from "../api/porters";
+import { loginTraveller, registerTraveller } from "../api/travellers";
 import "./LoginPage.css";
 
 const initialLoginForm = { username: "", email: "", password: "" };
-const initialRegisterForm = { username: "", email: "", password: "" };
+const initialRegisterForm = { name: "", username: "", email: "", password: "" };
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -48,31 +49,32 @@ export function LoginPage() {
       return;
     }
 
-    if (isPorterLogin) {
-      setIsSubmitting(true);
-      try {
+    setIsSubmitting(true);
+    try {
+      if (isPorterLogin) {
         const payload = await loginPorter(loginForm.username, loginForm.password);
         const porter = payload.data;
         localStorage.setItem("porterId", porter.id);
         localStorage.setItem("porterName", porter.name || loginForm.username);
         localStorage.setItem("porterUsername", porter.username || loginForm.username);
         navigate("/porter-dashboard");
-      } catch (error) {
-        window.alert(error.message || "Unable to reach the server. Please try again.");
-      } finally {
-        setIsSubmitting(false);
+      } else {
+        const payload = await loginTraveller(loginForm.username, loginForm.password);
+        localStorage.setItem("username", payload.data.username);
+        navigate("/book");
       }
-      return;
+    } catch (error) {
+      window.alert(error.message || "Unable to reach the server. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    localStorage.setItem("username", loginForm.username);
-    navigate("/book");
   };
 
-  const handleRegisterSubmit = (event) => {
+  const handleRegisterSubmit = async (event) => {
     event.preventDefault();
 
     const errors = {};
+    if (!registerForm.name.trim()) errors.name = true;
     if (!registerForm.username.trim() || registerForm.username.trim().length < 3) errors.username = true;
     if (!registerForm.email.trim() || !registerForm.email.includes("@")) errors.email = true;
     if (!registerForm.password || registerForm.password.length < 6) errors.password = true;
@@ -82,8 +84,16 @@ export function LoginPage() {
       return;
     }
 
-    localStorage.setItem("username", registerForm.username);
-    navigate("/book");
+    setIsSubmitting(true);
+    try {
+      const payload = await registerTraveller(registerForm);
+      localStorage.setItem("username", payload.data.username);
+      navigate("/book");
+    } catch (error) {
+      window.alert(error.message || "Unable to reach the server. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -174,6 +184,20 @@ export function LoginPage() {
         ) : (
           <form onSubmit={handleRegisterSubmit} noValidate>
             <div className="field">
+              <label className="field-label">Full Name</label>
+              <input
+                className={`input${registerErrors.name ? " has-error" : ""}`}
+                placeholder="Sameer Khan"
+                value={registerForm.name}
+                onChange={(event) => {
+                  setRegisterForm({ ...registerForm, name: event.target.value });
+                  setRegisterErrors({ ...registerErrors, name: false });
+                }}
+              />
+              {registerErrors.name && <div className="field-error is-visible">Name is required</div>}
+            </div>
+
+            <div className="field">
               <label className="field-label">Username</label>
               <input
                 className={`input${registerErrors.username ? " has-error" : ""}`}
@@ -221,8 +245,8 @@ export function LoginPage() {
               )}
             </div>
 
-            <button type="submit" className="btn btn-primary btn-block">
-              Register
+            <button type="submit" className="btn btn-primary btn-block" disabled={isSubmitting}>
+              {isSubmitting ? "Creating account..." : "Register"}
             </button>
 
             <div className="login-switch">
